@@ -72,11 +72,8 @@ export async function POST(request: Request) {
       // Não falhar o pagamento se der erro no banco, apenas logar
     }
 
-    // SIMULAÇÃO: Para teste, retornar sucesso direto
-    console.log("Simulando pagamento aprovado para teste")
-
     return NextResponse.json({
-      init_point: `${process.env.NEXT_PUBLIC_BASE_URL || "https://ditocomamor-production.up.railway.app"}/pagamento/sucesso?data=${encodeURIComponent(JSON.stringify(pageData))}`,
+      init_point: data.init_point,
       preference_id: data.id,
     })
   } catch (error) {
