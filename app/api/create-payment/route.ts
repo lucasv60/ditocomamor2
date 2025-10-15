@@ -28,9 +28,9 @@ export async function POST(request: Request) {
         name: customerName,
       },
       back_urls: {
-        success: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/pagamento/sucesso`,
-        failure: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/pagamento/falha`,
-        pending: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/pagamento/pendente`,
+        success: `${process.env.NEXT_PUBLIC_BASE_URL || "https://ditocomamor-production.up.railway.app"}/pagamento/sucesso`,
+        failure: `${process.env.NEXT_PUBLIC_BASE_URL || "https://ditocomamor-production.up.railway.app"}/pagamento/falha`,
+        pending: `${process.env.NEXT_PUBLIC_BASE_URL || "https://ditocomamor-production.up.railway.app"}/pagamento/pendente`,
       },
       auto_return: "approved",
       metadata: {
