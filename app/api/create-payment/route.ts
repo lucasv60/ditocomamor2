@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
 
 export async function POST(request: Request) {
   try {
@@ -52,6 +53,23 @@ export async function POST(request: Request) {
     if (!response.ok) {
       console.error("Mercado Pago error:", data)
       return NextResponse.json({ error: "Erro ao criar preferência de pagamento" }, { status: 500 })
+    }
+
+    // Salvar página no banco de dados
+    try {
+      await prisma.lovePage.create({
+        data: {
+          pageName: pageData.pageName,
+          pageTitle: pageData.pageTitle,
+          startDate: new Date(pageData.startDate),
+          loveText: pageData.loveText,
+          youtubeUrl: pageData.youtubeUrl || null,
+          photos: pageData.photos,
+        }
+      })
+    } catch (dbError) {
+      console.error("Database error:", dbError)
+      // Não falhar o pagamento se der erro no banco, apenas logar
     }
 
     return NextResponse.json({

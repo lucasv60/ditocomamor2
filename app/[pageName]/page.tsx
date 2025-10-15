@@ -8,6 +8,7 @@ import { useParams, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { prisma } from "@/lib/prisma"
 
 type PageData = {
   pageName: string
@@ -27,7 +28,28 @@ export default function DynamicRomanticPage() {
   const [loading, setLoading] = useState(true)
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
 
-  const loadPageData = useCallback(() => {
+  const loadPageData = useCallback(async () => {
+    try {
+      // Primeiro tentar buscar do banco de dados
+      const response = await fetch(`/api/pages/${pageName}`)
+      if (response.ok) {
+        const dbData = await response.json()
+        setPageData({
+          pageName: dbData.pageName,
+          pageTitle: dbData.pageTitle,
+          startDate: dbData.startDate,
+          photos: dbData.photos,
+          loveText: dbData.loveText,
+          youtubeUrl: dbData.youtubeUrl,
+        })
+        setLoading(false)
+        return
+      }
+    } catch (error) {
+      console.error("Error loading from database:", error)
+    }
+
+    // Fallback para URL/localStorage (para compatibilidade)
     const dataParam = searchParams.get("data")
 
     if (dataParam) {

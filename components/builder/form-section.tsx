@@ -19,13 +19,14 @@ type Props = {
 
 export function FormSection({ builderData, setBuilderData }: Props) {
   const [currentStep, setCurrentStep] = useState(1)
+  const [loading, setLoading] = useState(false)
   const router = useRouter()
 
   const updateData = (field: keyof BuilderData, value: any) => {
     setBuilderData({ ...builderData, [field]: value })
   }
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
 
     // Validações de arquivo
@@ -52,14 +53,43 @@ export function FormSection({ builderData, setBuilderData }: Props) {
 
     if (invalidFiles.length > 0) return
 
-    const newPhotos = files.map((file) => ({
-      file,
-      preview: URL.createObjectURL(file),
-      caption: "",
-    }))
+    setLoading(true)
 
-    updateData("photos", [...builderData.photos, ...newPhotos])
-    toast.success(`${files.length} foto(s) adicionada(s) com sucesso!`)
+    try {
+      const uploadPromises = files.map(async (file) => {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || 'Erro no upload')
+        }
+
+        const result = await response.json()
+
+        return {
+          file,
+          preview: result.url,
+          caption: "",
+          public_id: result.public_id,
+        }
+      })
+
+      const newPhotos = await Promise.all(uploadPromises)
+
+      updateData("photos", [...builderData.photos, ...newPhotos])
+      toast.success(`${files.length} foto(s) enviada(s) com sucesso!`)
+    } catch (error) {
+      console.error('Erro no upload:', error)
+      toast.error('Erro ao enviar fotos. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const removePhoto = (index: number) => {
