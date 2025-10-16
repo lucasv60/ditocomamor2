@@ -19,19 +19,13 @@ export async function POST(request: Request) {
           title: `Página de Amor: ${pageData.pageTitle}`,
           description: "Página de amor personalizada com fotos e mensagens",
           quantity: 1,
-          unit_price: 0.01,
+          unit_price: 10.0,
           currency_id: "BRL",
         },
       ],
       payer: {
         email: customerEmail,
         name: customerName,
-      },
-      payment_methods: {
-        excluded_payment_types: [
-          { id: "ticket" } // Remove boleto for testing
-        ],
-        installments: 1, // Only 1 installment for testing
       },
       back_urls: {
         success: `${process.env.NEXT_PUBLIC_BASE_URL}/pagamento/sucesso`,
