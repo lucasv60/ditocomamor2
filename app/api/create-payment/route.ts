@@ -19,7 +19,7 @@ export async function POST(request: Request) {
           title: `Página de Amor: ${pageData.pageTitle}`,
           description: "Página de amor personalizada com fotos e mensagens",
           quantity: 1,
-          unit_price: 10.0,
+          unit_price: 0.01,
           currency_id: "BRL",
         },
       ],
@@ -28,9 +28,9 @@ export async function POST(request: Request) {
         name: customerName,
       },
       back_urls: {
-        success: `${process.env.NEXT_PUBLIC_BASE_URL || "https://ditocomamor-production.up.railway.app"}/pagamento/sucesso`,
-        failure: `${process.env.NEXT_PUBLIC_BASE_URL || "https://ditocomamor-production.up.railway.app"}/pagamento/falha`,
-        pending: `${process.env.NEXT_PUBLIC_BASE_URL || "https://ditocomamor-production.up.railway.app"}/pagamento/pendente`,
+        success: `${process.env.NEXT_PUBLIC_BASE_URL}/pagamento/sucesso`,
+        failure: `${process.env.NEXT_PUBLIC_BASE_URL}/pagamento/falha`,
+        pending: `${process.env.NEXT_PUBLIC_BASE_URL}/pagamento/pendente`,
       },
       auto_return: "approved",
       metadata: {
