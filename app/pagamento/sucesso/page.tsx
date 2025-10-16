@@ -89,19 +89,15 @@ export default function PaymentSuccessPage() {
         }
         localStorage.setItem(`love-page-${pageData.pageName}`, JSON.stringify(dataWithExpiry))
 
-        // Encode data to base64 for URL
-        const encodedData = btoa(encodeURIComponent(pageDataStr))
+        // Generate clean URL without data parameter
+        const cleanUrl = `${window.location.origin}/${pageData.pageName}`
+        setGeneratedUrl(cleanUrl)
 
-        // Generate URL with data parameter
-        const url = `${window.location.origin}/${pageData.pageName}?data=${encodedData}`
-        setGeneratedUrl(url)
+        console.log("Generated clean URL:", cleanUrl)
 
-        console.log("Generated URL:", url)
-
-        // Generate QR Code (only with URL, not data)
+        // Generate QR Code with clean URL
         try {
-          const shortUrl = `${window.location.origin}/${pageData.pageName}`
-          const qrCodeDataUrl = await QRCode.toDataURL(shortUrl, {
+          const qrCodeDataUrl = await QRCode.toDataURL(cleanUrl, {
             width: 256,
             margin: 2,
             color: {
@@ -110,7 +106,7 @@ export default function PaymentSuccessPage() {
             }
           })
           setQrCodeUrl(qrCodeDataUrl)
-          console.log("QR Code generated successfully with short URL")
+          console.log("QR Code generated successfully with clean URL")
         } catch (qrError) {
           console.error("Error generating QR code:", qrError)
           toast.error("Erro ao gerar QR code, mas o link está disponível")
