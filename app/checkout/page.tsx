@@ -56,8 +56,8 @@ export default function CheckoutPage() {
 
       if (data.init_point) {
         toast.success("Redirecionando para pagamento...")
-        // Redirect to Mercado Pago checkout
-        window.location.href = data.init_point
+        // Open Mercado Pago in new tab to avoid storage access issues
+        window.open(data.init_point, '_blank')
       } else {
         toast.error("Erro ao criar pagamento. Tente novamente.")
       }
