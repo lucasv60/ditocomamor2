@@ -29,33 +29,57 @@ export default function DynamicRomanticPage() {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
 
   const loadPageData = useCallback(async () => {
+    console.log("Loading page data for:", pageName)
+
     try {
       // Primeiro tentar buscar do banco de dados
+      console.log("Trying to fetch from database...")
       const response = await fetch(`/api/pages/${pageName}`)
+      console.log("Database response status:", response.status)
+
       if (response.ok) {
         const dbData = await response.json()
+        console.log("Database data received:", dbData)
+
+        // Parse photos if it's a string
+        let photos = dbData.photos
+        if (typeof photos === 'string') {
+          try {
+            photos = JSON.parse(photos)
+          } catch (parseError) {
+            console.error("Error parsing photos from database:", parseError)
+            photos = []
+          }
+        }
+
         setPageData({
           pageName: dbData.pageName,
           pageTitle: dbData.pageTitle,
           startDate: dbData.startDate,
-          photos: dbData.photos,
+          photos: photos,
           loveText: dbData.loveText,
           youtubeUrl: dbData.youtubeUrl,
         })
+        console.log("Page data set from database")
         setLoading(false)
         return
+      } else {
+        console.log("Database response not OK, trying fallback...")
       }
     } catch (error) {
       console.error("Error loading from database:", error)
     }
 
     // Fallback para URL/localStorage (para compatibilidade)
+    console.log("No database data, trying URL/localStorage fallback...")
     const dataParam = searchParams.get("data")
 
     if (dataParam) {
+      console.log("Found data parameter in URL")
       try {
         // Decode data from URL
         const decodedData = JSON.parse(decodeURIComponent(atob(dataParam)))
+        console.log("Successfully decoded URL data")
         setPageData(decodedData)
         // Save to localStorage for future visits with expiração
         const expiryTime = Date.now() + (30 * 24 * 60 * 60 * 1000) // 30 dias
@@ -85,6 +109,7 @@ export default function DynamicRomanticPage() {
         }
       }
     } else {
+      console.log("No URL data parameter, trying localStorage")
       // No URL data, try localStorage
       const savedData = localStorage.getItem(`love-page-${pageName}`)
       if (savedData) {
@@ -92,14 +117,18 @@ export default function DynamicRomanticPage() {
           const parsedData = JSON.parse(savedData)
           // Verificar se não expirou
           if (parsedData.expiry && Date.now() < parsedData.expiry) {
+            console.log("Found valid data in localStorage")
             setPageData(parsedData.data)
           } else {
+            console.log("localStorage data expired, removing")
             localStorage.removeItem(`love-page-${pageName}`)
           }
         } catch (parseError) {
           console.error("Error parsing localStorage data:", parseError)
           localStorage.removeItem(`love-page-${pageName}`)
         }
+      } else {
+        console.log("No data found in localStorage either")
       }
     }
 
