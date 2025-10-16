@@ -27,6 +27,12 @@ export async function POST(request: Request) {
         email: customerEmail,
         name: customerName,
       },
+      payment_methods: {
+        excluded_payment_types: [
+          { id: "ticket" } // Remove boleto for testing
+        ],
+        installments: 1, // Only 1 installment for testing
+      },
       back_urls: {
         success: `${process.env.NEXT_PUBLIC_BASE_URL}/pagamento/sucesso`,
         failure: `${process.env.NEXT_PUBLIC_BASE_URL}/pagamento/falha`,
