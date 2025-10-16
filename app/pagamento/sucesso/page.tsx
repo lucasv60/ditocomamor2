@@ -66,6 +66,21 @@ export default function PaymentSuccessPage() {
 
         const pageData = JSON.parse(pageDataStr)
 
+        // Save to database
+        try {
+          await fetch("/api/pages", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(pageData),
+          })
+          console.log("Page saved to database successfully")
+        } catch (dbError) {
+          console.error("Database save error:", dbError)
+          // Continue anyway - page will work from localStorage
+        }
+
         // Save to localStorage for backup with expiração
         const expiryTime = Date.now() + (30 * 24 * 60 * 60 * 1000) // 30 dias
         const dataWithExpiry = {

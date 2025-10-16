@@ -61,22 +61,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Erro ao criar preferência de pagamento" }, { status: 500 })
     }
 
-    // Salvar página no banco de dados
-    try {
-      await prisma.lovePage.create({
-        data: {
-          pageName: pageData.pageName,
-          pageTitle: pageData.pageTitle,
-          startDate: new Date(pageData.startDate),
-          loveText: pageData.loveText,
-          youtubeUrl: pageData.youtubeUrl || null,
-          photos: pageData.photos,
-        }
-      })
-    } catch (dbError) {
-      console.error("Database error:", dbError)
-      // Não falhar o pagamento se der erro no banco, apenas logar
-    }
+    // Salvar página no banco de dados APENAS após pagamento aprovado
+    // Por enquanto, apenas prosseguir com o pagamento
 
     return NextResponse.json({
       init_point: data.init_point,
