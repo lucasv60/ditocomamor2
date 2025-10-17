@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { handleApiError, createSuccessResponse } from '@/lib/error-handler'
+import { withApiMiddleware } from '@/lib/middleware'
+import { pageCache } from '@/lib/cache'
 
 export async function GET(
   request: NextRequest,
@@ -8,17 +11,26 @@ export async function GET(
   try {
     const pageName = params.pageName
 
+    // Check cache first
+    const cacheKey = `page:${pageName}`
+    const cachedPage = pageCache.get(cacheKey)
+    if (cachedPage) {
+      return createSuccessResponse(cachedPage)
+    }
+
     const page = await prisma.lovePage.findUnique({
       where: { pageName }
     })
 
     if (!page) {
-      return NextResponse.json({ error: 'Página não encontrada' }, { status: 404 })
+      return createSuccessResponse(null, 'Página não encontrada', 404)
     }
 
-    return NextResponse.json(page)
+    // Cache the result
+    pageCache.set(cacheKey, page)
+
+    return createSuccessResponse(page)
   } catch (error) {
-    console.error('Error fetching page:', error)
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+    return handleApiError(error)
   }
 }

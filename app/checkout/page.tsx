@@ -58,6 +58,14 @@ export default function CheckoutPage() {
         toast.success("Redirecionando para pagamento...")
         // Open Mercado Pago in new tab to avoid storage access issues
         window.open(data.init_point, '_blank')
+
+        // Clear session storage after successful payment creation
+        sessionStorage.removeItem("pendingLovePage")
+
+        // Redirect to pending payment page
+        setTimeout(() => {
+          router.push("/pagamento/pendente")
+        }, 2000)
       } else {
         toast.error("Erro ao criar pagamento. Tente novamente.")
       }

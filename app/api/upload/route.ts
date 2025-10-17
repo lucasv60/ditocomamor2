@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { writeFile } from 'fs/promises'
 import { join } from 'path'
+import { handleApiError, createSuccessResponse, UploadError } from '@/lib/error-handler'
+import { validateAndSanitize, fileUploadSchema } from '@/lib/validation'
 
 // Fallback para local storage se Cloudinary não estiver configurado
 const useLocalStorage = !process.env.CLOUDINARY_CLOUD_NAME
@@ -27,18 +29,13 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File
 
     if (!file) {
-      return NextResponse.json({ error: 'Nenhum arquivo enviado' }, { status: 400 })
+      throw new UploadError('Nenhum arquivo enviado')
     }
 
-    // Validar tipo de arquivo
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ error: 'Tipo de arquivo não suportado' }, { status: 400 })
-    }
-
-    // Validar tamanho (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: 'Arquivo muito grande (máximo 5MB)' }, { status: 400 })
+    // Validate file using schema
+    const validation = validateAndSanitize(fileUploadSchema, { file })
+    if (!validation.success) {
+      return createSuccessResponse(null, `Arquivo inválido: ${validation.errors.join(', ')}`, 400)
     }
 
     // Converter arquivo para buffer
@@ -47,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     if (useLocalStorage || !cloudinary) {
       // Fallback: salvar localmente
-      const filename = `${Date.now()}-${file.name}`
+      const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
       const filepath = join(process.cwd(), 'public', 'uploads', filename)
 
       // Criar diretório se não existir
@@ -61,10 +58,10 @@ export async function POST(request: NextRequest) {
       await writeFile(filepath, buffer)
 
       const url = `/uploads/${filename}`
-      return NextResponse.json({
+      return createSuccessResponse({
         url,
         public_id: filename
-      })
+      }, 'Arquivo enviado com sucesso')
     } else {
       // Upload para Cloudinary
       const result = await new Promise((resolve, reject) => {
@@ -78,20 +75,19 @@ export async function POST(request: NextRequest) {
             ]
           },
           (error: any, result: any) => {
-            if (error) reject(error)
+            if (error) reject(new UploadError(`Erro no upload: ${error.message}`))
             else resolve(result)
           }
         ).end(buffer)
       })
 
-      return NextResponse.json({
+      return createSuccessResponse({
         url: (result as any).secure_url,
         public_id: (result as any).public_id
-      })
+      }, 'Arquivo enviado com sucesso')
     }
 
   } catch (error) {
-    console.error('Erro no upload:', error)
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+    return handleApiError(error)
   }
 }

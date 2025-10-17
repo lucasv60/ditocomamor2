@@ -18,102 +18,57 @@ export default function PaymentSuccessPage() {
   useEffect(() => {
     const processPayment = async () => {
       try {
-        // SIMULAÇÃO: Sempre processar como se o pagamento foi aprovado
-        // Em produção, verificar payment_id e preference_id do Mercado Pago
+        // Get payment details from Mercado Pago URL parameters
+        const paymentId = searchParams.get("payment_id")
+        const preferenceId = searchParams.get("preference_id")
+        const status = searchParams.get("status")
 
-        // Primeiro tentar obter dados da URL (método mais confiável)
-        const dataParam = searchParams.get("data")
-        let pageDataStr = null
+        console.log("Payment success params:", { paymentId, preferenceId, status })
 
-        console.log("Checking URL parameter 'data':", dataParam ? "PRESENT" : "NOT FOUND")
-
-        if (dataParam) {
-          try {
-            pageDataStr = decodeURIComponent(atob(dataParam))
-            console.log("Successfully decoded data from URL, length:", pageDataStr.length)
-          } catch (decodeError) {
-            console.error("Error decoding URL data:", decodeError)
-          }
-        }
-
-        // Fallback: tentar localStorage/sessionStorage (para compatibilidade)
-        if (!pageDataStr) {
-          console.log("No URL data, trying storage fallback...")
-          const tempKey = localStorage.getItem("temp_love_page_key")
-
-          if (tempKey) {
-            pageDataStr = localStorage.getItem(tempKey)
-            console.log("Found data in localStorage with key:", tempKey)
-          }
-
-          if (!pageDataStr) {
-            pageDataStr = sessionStorage.getItem("pendingLovePage")
-            console.log("Fallback to sessionStorage:", pageDataStr ? "FOUND" : "NOT FOUND")
-          }
-        }
-
-        if (!pageDataStr) {
-          console.error("Page data not found in URL, localStorage, or sessionStorage")
-          console.log("URL params:", Object.fromEntries(searchParams.entries()))
-          console.log("localStorage keys:", Object.keys(localStorage))
-          console.log("sessionStorage keys:", Object.keys(sessionStorage))
-          toast.error("Dados da página não encontrados. Volte e tente novamente.")
-          router.push("/criar-presente-especial")
+        if (!paymentId || !preferenceId) {
+          toast.error("Informações de pagamento incompletas.")
+          router.push("/pagamento/pendente")
           return
         }
 
-        console.log("Successfully obtained pageDataStr:", pageDataStr.substring(0, 100) + "...")
+        // Verify payment status with Mercado Pago API
+        const MERCADO_PAGO_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MERCADO_PAGO_ACCESS_TOKEN ||
+          "APP_USR-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" // fallback for client-side
 
-        const pageData = JSON.parse(pageDataStr)
-
-        // Save to database with retry logic
-        let saveAttempts = 0
-        const maxAttempts = 3
-
-        while (saveAttempts < maxAttempts) {
-          try {
-            const response = await fetch("/api/pages", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(pageData),
-            })
-
-            if (response.ok) {
-              console.log("Page saved to database successfully")
-              break
-            } else {
-              throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-            }
-          } catch (dbError) {
-            saveAttempts++
-            console.error(`Database save attempt ${saveAttempts} failed:`, dbError)
-
-            if (saveAttempts >= maxAttempts) {
-              console.error("All database save attempts failed")
-              toast.error("Página salva localmente. Pode não funcionar em outros dispositivos.")
-            } else {
-              // Wait 1 second before retry
-              await new Promise(resolve => setTimeout(resolve, 1000))
-            }
+        const paymentResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+          headers: {
+            'Authorization': `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`
           }
+        })
+
+        if (!paymentResponse.ok) {
+          console.error("Failed to verify payment with Mercado Pago")
+          toast.error("Erro ao verificar pagamento. Entre em contato com o suporte.")
+          return
         }
 
-        // Save to localStorage for backup with expiração
-        const expiryTime = Date.now() + (30 * 24 * 60 * 60 * 1000) // 30 dias
-        const dataWithExpiry = {
-          data: pageData,
-          expiry: expiryTime
-        }
-        localStorage.setItem(`love-page-${pageData.pageName}`, JSON.stringify(dataWithExpiry))
+        const paymentData = await paymentResponse.json()
 
-        // Generate clean URL without data parameter
-        const cleanUrl = `${window.location.origin}/${pageData.pageName}`
-        const shortUrl = `/${pageData.pageName}` // For display
+        if (paymentData.status !== 'approved') {
+          toast.error("Pagamento não foi aprovado. Tente novamente.")
+          router.push("/checkout")
+          return
+        }
+
+        // Get memory data from Supabase using preference_id
+        const { data: memory, error: fetchError } = await fetch(`/api/memory/${preferenceId}`).then(r => r.json())
+
+        if (fetchError || !memory) {
+          console.error("Memory not found for preference_id:", preferenceId)
+          toast.error("Página não encontrada. Entre em contato com o suporte.")
+          return
+        }
+
+        // Generate clean URL for the memory page
+        const cleanUrl = `${window.location.origin}/memory/${memory.slug}`
         setGeneratedUrl(cleanUrl)
 
-        console.log("Generated clean URL:", cleanUrl)
+        console.log("Generated memory URL:", cleanUrl)
 
         // Generate QR Code with clean URL
         try {
@@ -126,24 +81,16 @@ export default function PaymentSuccessPage() {
             }
           })
           setQrCodeUrl(qrCodeDataUrl)
-          console.log("QR Code generated successfully with clean URL")
+          console.log("QR Code generated successfully")
         } catch (qrError) {
           console.error("Error generating QR code:", qrError)
           toast.error("Erro ao gerar QR code, mas o link está disponível")
         }
 
-        // Clear temporary data
-        const tempKeyToRemove = localStorage.getItem("temp_love_page_key")
-        if (tempKeyToRemove) {
-          localStorage.removeItem(tempKeyToRemove)
-          localStorage.removeItem("temp_love_page_key")
-        }
-        sessionStorage.removeItem("pendingLovePage")
-
-        toast.success("Página criada com sucesso!")
+        toast.success("Pagamento confirmado! Sua página de amor está pronta.")
       } catch (error) {
-        console.error("Error processing payment:", error)
-        toast.error("Erro ao processar pagamento. Tente novamente.")
+        console.error("Error processing payment success:", error)
+        toast.error("Erro ao processar confirmação do pagamento.")
       } finally {
         setLoading(false)
       }

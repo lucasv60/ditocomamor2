@@ -1,18 +1,79 @@
-import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { NextRequest } from "next/server"
+import { handleApiError, createSuccessResponse, PaymentError } from '@/lib/error-handler'
+import { validateAndSanitize, paymentSchema } from '@/lib/validation'
+import { supabaseServer } from '@/lib/supabase'
+import * as mercadopago from 'mercadopago'
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { pageData, customerEmail, customerName } = await request.json()
+    const body = await request.json()
+
+    // Validate input
+    const validation = validateAndSanitize(paymentSchema, body)
+    if (!validation.success) {
+      return createSuccessResponse(null, `Dados inválidos: ${validation.errors.join(', ')}`, 400)
+    }
+
+    const { pageData, customerEmail, customerName } = validation.data
 
     // Mercado Pago API configuration
     const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN
 
     if (!MERCADO_PAGO_ACCESS_TOKEN) {
-      return NextResponse.json({ error: "Mercado Pago não configurado" }, { status: 500 })
+      throw new PaymentError('Mercado Pago não configurado')
     }
 
-    // Create payment preference
+    // Configure Mercado Pago
+    const mercadopagoClient = require('mercadopago')
+    mercadopagoClient.configure({
+      access_token: MERCADO_PAGO_ACCESS_TOKEN
+    })
+
+    // Upload photos to Supabase Storage
+    const uploadedPhotoUrls: string[] = []
+    if (pageData.photos && pageData.photos.length > 0) {
+      for (const photo of pageData.photos) {
+        if (photo.file) {
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${photo.file.name.split('.').pop()}`
+          const { data: uploadData, error: uploadError } = await supabaseServer.storage
+            .from('memories-photos')
+            .upload(fileName, photo.file)
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError)
+            throw new PaymentError('Erro ao fazer upload das fotos')
+          }
+
+          const { data: { publicUrl } } = supabaseServer.storage
+            .from('memories-photos')
+            .getPublicUrl(fileName)
+
+          uploadedPhotoUrls.push(publicUrl)
+        }
+      }
+    }
+
+    // Create memory record in Supabase
+    const { data: memoryData, error: memoryError } = await supabaseServer
+      .from('memories')
+      .insert({
+        slug: pageData.pageName,
+        title: pageData.pageTitle,
+        love_letter_content: pageData.loveText,
+        relationship_start_date: pageData.startDate ? new Date(pageData.startDate).toISOString().split('T')[0] : null,
+        photos_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
+        youtube_music_url: pageData.youtubeUrl || null,
+        payment_status: 'pending'
+      })
+      .select()
+      .single()
+
+    if (memoryError) {
+      console.error('Database error:', memoryError)
+      throw new PaymentError('Erro ao salvar dados da memória')
+    }
+
+    // Create payment preference with IPN notification URL
     const preference = {
       items: [
         {
@@ -33,37 +94,38 @@ export async function POST(request: Request) {
         pending: `${process.env.NEXT_PUBLIC_BASE_URL}/pagamento/pendente`,
       },
       auto_return: "approved",
+      notification_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/mercadopago-ipn`,
+      external_reference: memoryData.id,
       metadata: {
-        page_name: pageData.pageName,
-        page_data: JSON.stringify(pageData),
+        memory_id: memoryData.id,
+        slug: pageData.pageName,
       },
     }
 
-    const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
-      },
-      body: JSON.stringify(preference),
-    })
+    const preferenceResponse = await mercadopagoClient.preferences.create(preference)
 
-    const data = await response.json()
-
-    if (!response.ok) {
-      console.error("Mercado Pago error:", data)
-      return NextResponse.json({ error: "Erro ao criar preferência de pagamento" }, { status: 500 })
+    if (!preferenceResponse || !preferenceResponse.body) {
+      throw new PaymentError('Erro ao criar preferência de pagamento')
     }
 
-    // Salvar página no banco de dados APENAS após pagamento aprovado
-    // Por enquanto, apenas prosseguir com o pagamento
+    const preferenceData = preferenceResponse.body
 
-    return NextResponse.json({
-      init_point: data.init_point,
-      preference_id: data.id,
-    })
+    // Update memory with preference_id
+    const { error: updateError } = await supabaseServer
+      .from('memories')
+      .update({ preference_id: preferenceData.id })
+      .eq('id', memoryData.id)
+
+    if (updateError) {
+      console.error('Update error:', updateError)
+      // Don't throw here as payment preference was created successfully
+    }
+
+    return createSuccessResponse({
+      init_point: preferenceData.init_point,
+      preference_id: preferenceData.id,
+    }, 'Preferência de pagamento criada com sucesso')
   } catch (error) {
-    console.error("Error creating payment:", error)
-    return NextResponse.json({ error: "Erro ao processar pagamento" }, { status: 500 })
+    return handleApiError(error)
   }
 }
