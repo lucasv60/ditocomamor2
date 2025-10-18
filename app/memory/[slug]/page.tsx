@@ -9,25 +9,39 @@ async function getSignedUrls(photoUrls: string[]) {
 
   const signedUrls = await Promise.all(
     photoUrls.map(async (url) => {
-      // Extract file path from Supabase URL
-      // URL format: https://[project-id].supabase.co/storage/v1/object/public/memories-photos/[filename]
-      // We need just the filename part
+      // Extract file path from Supabase URL using URL constructor for robustness
       let fileName = ''
 
-      if (url.includes('supabase.co/storage/v1/object/public/memories-photos/')) {
-        // Extract from full Supabase URL
-        const parts = url.split('/memories-photos/')
-        fileName = parts[1] || ''
-      } else if (url.includes('/')) {
-        // Extract from relative URL or other format
-        const urlParts = url.split('/')
-        fileName = urlParts[urlParts.length - 1]
-      } else {
-        // Assume it's already just the filename
-        fileName = url
-      }
+      try {
+        const fullUrl = url
+        const urlParts = new URL(fullUrl)
+        // pathname will be something like /storage/v1/object/public/memories-photos/123-foto.png
+        const path = urlParts.pathname
 
-      console.log('Extracted fileName from URL:', url, '->', fileName)
+        // Extract only the part that starts after the bucket name ('memories-photos/')
+        const BUCKET_NAME = 'memories-photos'
+        const bucketIndex = path.indexOf(BUCKET_NAME)
+
+        if (bucketIndex !== -1) {
+          fileName = path.substring(bucketIndex + BUCKET_NAME.length + 1) // +1 for the slash
+        } else {
+          // Fallback: if bucket name not found, take the last part
+          const pathParts = path.split('/')
+          fileName = pathParts[pathParts.length - 1]
+        }
+
+        console.log('Extracted fileName from URL:', url, '->', fileName, '(from path:', path, ')')
+      } catch (error) {
+        console.error('Error parsing URL:', url, error)
+        // Fallback for non-URL strings
+        if (url.includes('/')) {
+          const urlParts = url.split('/')
+          fileName = urlParts[urlParts.length - 1]
+        } else {
+          fileName = url
+        }
+        console.log('Fallback extraction for URL:', url, '->', fileName)
+      }
 
       if (!fileName) {
         console.error('Could not extract filename from URL:', url)
@@ -35,6 +49,7 @@ async function getSignedUrls(photoUrls: string[]) {
       }
 
       try {
+        console.log('Calling API with filePath:', fileName)
         const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/get-signed-url`, {
           method: 'POST',
           headers: {
