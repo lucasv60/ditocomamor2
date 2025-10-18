@@ -5,11 +5,34 @@ import { RomanticPreview } from '@/components/builder/romantic-preview'
 
 // Helper function to get signed URLs for photos
 async function getSignedUrls(photoUrls: string[]) {
+  console.log('Original photo URLs:', photoUrls)
+
   const signedUrls = await Promise.all(
     photoUrls.map(async (url) => {
       // Extract file path from Supabase URL
-      const urlParts = url.split('/')
-      const fileName = urlParts[urlParts.length - 1]
+      // URL format: https://[project-id].supabase.co/storage/v1/object/public/memories-photos/[filename]
+      // We need just the filename part
+      let fileName = ''
+
+      if (url.includes('supabase.co/storage/v1/object/public/memories-photos/')) {
+        // Extract from full Supabase URL
+        const parts = url.split('/memories-photos/')
+        fileName = parts[1] || ''
+      } else if (url.includes('/')) {
+        // Extract from relative URL or other format
+        const urlParts = url.split('/')
+        fileName = urlParts[urlParts.length - 1]
+      } else {
+        // Assume it's already just the filename
+        fileName = url
+      }
+
+      console.log('Extracted fileName from URL:', url, '->', fileName)
+
+      if (!fileName) {
+        console.error('Could not extract filename from URL:', url)
+        return url // fallback to original URL
+      }
 
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/get-signed-url`, {
@@ -22,18 +45,21 @@ async function getSignedUrls(photoUrls: string[]) {
 
         if (response.ok) {
           const data = await response.json()
+          console.log('Got signed URL for', fileName, ':', data.data?.signedUrl)
           return data.data.signedUrl
         } else {
-          console.error('Failed to get signed URL for:', fileName)
+          const errorText = await response.text()
+          console.error('Failed to get signed URL for:', fileName, 'Response:', response.status, errorText)
           return url // fallback to original URL
         }
       } catch (error) {
-        console.error('Error getting signed URL:', error)
+        console.error('Error getting signed URL for', fileName, ':', error)
         return url // fallback to original URL
       }
     })
   )
 
+  console.log('Final signed URLs:', signedUrls)
   return signedUrls
 }
 
