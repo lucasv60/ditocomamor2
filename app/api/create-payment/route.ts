@@ -6,7 +6,13 @@ import * as mercadopago from 'mercadopago'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('=== CREATE PAYMENT API STARTED ===')
+    console.log('Request method:', request.method)
+    console.log('Request headers:', Object.fromEntries(request.headers))
+
     const body = await request.json()
+    console.log('=== REQUEST BODY PARSED ===')
+    console.log('Raw body:', JSON.stringify(body, null, 2))
 
     // Validate input
     const validation = validateAndSanitize(paymentSchema, body)
@@ -15,6 +21,10 @@ export async function POST(request: NextRequest) {
     }
 
     const { pageData, customerEmail, customerName } = validation.data
+    console.log('=== VALIDATION PASSED ===')
+    console.log('pageData:', JSON.stringify(pageData, null, 2))
+    console.log('customerEmail:', customerEmail)
+    console.log('customerName:', customerName)
 
     // Mercado Pago API configuration
     const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN
@@ -30,17 +40,23 @@ export async function POST(request: NextRequest) {
     })
 
     // Upload photos to Supabase Storage
+    console.log('=== STARTING PHOTO UPLOAD ===')
     const uploadedPhotoUrls: string[] = []
     if (pageData.photos && pageData.photos.length > 0) {
+      console.log('Found', pageData.photos.length, 'photos to upload')
       for (const photo of pageData.photos) {
+        console.log('Processing photo:', photo.caption || 'unnamed', 'has file:', !!photo.file)
         if (photo.file) {
           const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${photo.file.name.split('.').pop()}`
+          console.log('Generated filename:', fileName)
+
           const { data: uploadData, error: uploadError } = await supabaseServer.storage
             .from('memories-photos')
             .upload(fileName, photo.file)
 
           if (uploadError) {
-            console.error('Upload error:', uploadError)
+            console.error('=== PHOTO UPLOAD ERROR ===')
+            console.error('Upload error for file:', fileName, 'Error:', uploadError)
             throw new PaymentError('Erro ao fazer upload das fotos')
           }
 
@@ -48,10 +64,17 @@ export async function POST(request: NextRequest) {
             .from('memories-photos')
             .getPublicUrl(fileName)
 
+          console.log('Photo uploaded successfully. Public URL:', publicUrl)
           uploadedPhotoUrls.push(publicUrl)
+        } else {
+          console.log('Photo has no file data, skipping')
         }
       }
+    } else {
+      console.log('No photos to upload')
     }
+    console.log('=== PHOTO UPLOAD COMPLETE ===')
+    console.log('Total uploaded photos:', uploadedPhotoUrls.length)
 
     // Create memory record in Supabase
     console.log('=== CREATING MEMORY RECORD ===')
