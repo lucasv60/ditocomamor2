@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
           title: `Página de Amor: ${pageData.pageTitle}`,
           description: "Página de amor personalizada com fotos e mensagens",
           quantity: 1,
-          unit_price: 10.0,
+          unit_price: 1.0,
           currency_id: "BRL",
         },
       ],
