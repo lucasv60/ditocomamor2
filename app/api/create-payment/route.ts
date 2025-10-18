@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     // Create memory record in Supabase
     console.log('=== CREATING MEMORY RECORD ===')
-    console.log('Insert data:', {
+    const dataToInsert = {
       slug: pageData.pageName,
       title: pageData.pageTitle,
       love_letter_content: pageData.loveText,
@@ -92,34 +92,47 @@ export async function POST(request: NextRequest) {
       photos_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
       youtube_music_url: pageData.youtubeUrl || null,
       payment_status: 'pending'
-    })
+    }
+    console.log('EXACT DATA TO INSERT:', JSON.stringify(dataToInsert, null, 2))
 
-    const { data: memoryData, error: memoryError } = await supabaseServer
-      .from('memories')
-      .insert({
-        slug: pageData.pageName,
-        title: pageData.pageTitle,
-        love_letter_content: pageData.loveText,
-        relationship_start_date: pageData.startDate ? new Date(pageData.startDate).toISOString().split('T')[0] : null,
-        photos_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
-        youtube_music_url: pageData.youtubeUrl || null,
-        payment_status: 'pending'
-      })
-      .select()
-      .single()
+    let memoryData: any = null
+    try {
+      const { data, error: memoryError } = await supabaseServer
+        .from('memories')
+        .insert(dataToInsert)
+        .select()
+        .single()
 
-    if (memoryError) {
-      console.error('=== DATABASE INSERT ERROR ===')
-      console.error('Memory insert failed with error:', memoryError)
-      console.error('Error code:', memoryError.code)
-      console.error('Error message:', memoryError.message)
-      console.error('Error details:', memoryError.details)
-      console.error('Error hint:', memoryError.hint)
-      throw new PaymentError(`Erro ao salvar dados da memória: ${memoryError.message}`)
+      if (memoryError) {
+        console.error('=== DATABASE INSERT ERROR ===')
+        console.error('Memory insert failed with error:', memoryError)
+        console.error('Error code:', memoryError.code)
+        console.error('Error message:', memoryError.message)
+        console.error('Error details:', memoryError.details)
+        console.error('Error hint:', memoryError.hint)
+        return new Response(JSON.stringify({
+          success: false,
+          error: `Erro ao salvar dados da memória: ${memoryError.message}`,
+          code: 'DATABASE_ERROR',
+          details: memoryError
+        }), { status: 500 })
+      }
+
+      memoryData = data
+      console.log('=== MEMORY RECORD CREATED SUCCESSFULLY ===')
+      console.log('Created memory:', memoryData)
+    } catch (insertError) {
+      console.error('=== UNEXPECTED INSERT ERROR ===')
+      console.error('Unexpected error during insert:', insertError)
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Erro interno durante inserção no banco de dados',
+        code: 'INTERNAL_ERROR',
+        details: insertError instanceof Error ? insertError.message : String(insertError)
+      }), { status: 500 })
     }
 
-    console.log('=== MEMORY RECORD CREATED SUCCESSFULLY ===')
-    console.log('Created memory:', memoryData)
+    // This code block is now inside the try-catch above
 
     // Create payment preference with IPN notification URL
     const preference = {
