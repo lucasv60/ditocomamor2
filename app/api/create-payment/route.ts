@@ -54,6 +54,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Create memory record in Supabase
+    console.log('=== CREATING MEMORY RECORD ===')
+    console.log('Insert data:', {
+      slug: pageData.pageName,
+      title: pageData.pageTitle,
+      love_letter_content: pageData.loveText,
+      relationship_start_date: pageData.startDate ? new Date(pageData.startDate).toISOString().split('T')[0] : null,
+      photos_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
+      youtube_music_url: pageData.youtubeUrl || null,
+      payment_status: 'pending'
+    })
+
     const { data: memoryData, error: memoryError } = await supabaseServer
       .from('memories')
       .insert({
@@ -69,9 +80,17 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (memoryError) {
-      console.error('Database error:', memoryError)
-      throw new PaymentError('Erro ao salvar dados da memória')
+      console.error('=== DATABASE INSERT ERROR ===')
+      console.error('Memory insert failed with error:', memoryError)
+      console.error('Error code:', memoryError.code)
+      console.error('Error message:', memoryError.message)
+      console.error('Error details:', memoryError.details)
+      console.error('Error hint:', memoryError.hint)
+      throw new PaymentError(`Erro ao salvar dados da memória: ${memoryError.message}`)
     }
+
+    console.log('=== MEMORY RECORD CREATED SUCCESSFULLY ===')
+    console.log('Created memory:', memoryData)
 
     // Create payment preference with IPN notification URL
     const preference = {
@@ -111,14 +130,22 @@ export async function POST(request: NextRequest) {
     const preferenceData = preferenceResponse.body
 
     // Update memory with preference_id
+    console.log('=== UPDATING MEMORY WITH PREFERENCE ID ===')
+    console.log('Updating memory ID:', memoryData.id, 'with preference_id:', preferenceData.id)
+
     const { error: updateError } = await supabaseServer
       .from('memories')
       .update({ preference_id: preferenceData.id })
       .eq('id', memoryData.id)
 
     if (updateError) {
-      console.error('Update error:', updateError)
+      console.error('=== UPDATE ERROR ===')
+      console.error('Failed to update memory with preference_id:', updateError)
+      console.error('Error code:', updateError.code)
+      console.error('Error message:', updateError.message)
       // Don't throw here as payment preference was created successfully
+    } else {
+      console.log('=== MEMORY UPDATED SUCCESSFULLY ===')
     }
 
     return createSuccessResponse({
