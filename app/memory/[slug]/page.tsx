@@ -3,6 +3,40 @@ import { supabaseServer } from '@/lib/supabase'
 import { Memory } from '@/lib/types'
 import { RomanticPreview } from '@/components/builder/romantic-preview'
 
+// Helper function to get signed URLs for photos
+async function getSignedUrls(photoUrls: string[]) {
+  const signedUrls = await Promise.all(
+    photoUrls.map(async (url) => {
+      // Extract file path from Supabase URL
+      const urlParts = url.split('/')
+      const fileName = urlParts[urlParts.length - 1]
+
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/get-signed-url`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ filePath: fileName }),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          return data.data.signedUrl
+        } else {
+          console.error('Failed to get signed URL for:', fileName)
+          return url // fallback to original URL
+        }
+      } catch (error) {
+        console.error('Error getting signed URL:', error)
+        return url // fallback to original URL
+      }
+    })
+  )
+
+  return signedUrls
+}
+
 interface PageProps {
   params: {
     slug: string
@@ -24,6 +58,12 @@ export default async function MemoryPage({ params }: PageProps) {
     notFound()
   }
 
+  // Get signed URLs for photos if they exist
+  let signedPhotoUrls = memory.photos_urls || []
+  if (memory.photos_urls && memory.photos_urls.length > 0) {
+    signedPhotoUrls = await getSignedUrls(memory.photos_urls)
+  }
+
   // Transform data to match the expected format for RomanticPreview
   const pageData = {
     pageName: memory.slug,
@@ -31,11 +71,11 @@ export default async function MemoryPage({ params }: PageProps) {
     startDate: memory.relationship_start_date ? new Date(memory.relationship_start_date) : null,
     loveText: memory.love_letter_content,
     youtubeUrl: memory.youtube_music_url || '',
-    photos: memory.photos_urls ? memory.photos_urls.map((url: string, index: number) => ({
+    photos: signedPhotoUrls.map((url: string, index: number) => ({
       preview: url,
       caption: `Foto ${index + 1}`,
       public_id: `photo-${index}`
-    })) : []
+    }))
   }
 
   return (
