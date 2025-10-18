@@ -2,6 +2,12 @@ import { NextRequest } from "next/server"
 import { handleApiError, createSuccessResponse, PaymentError } from '@/lib/error-handler'
 import { validateAndSanitize, paymentSchema } from '@/lib/validation'
 import { supabaseServer } from '@/lib/supabase'
+
+// Verify we're using the correct client
+console.log('=== SUPABASE CLIENT VERIFICATION ===')
+console.log('Using supabaseServer client for database operations')
+console.log('Client type check:', typeof supabaseServer)
+console.log('Client has from method:', typeof supabaseServer.from)
 import * as mercadopago from 'mercadopago'
 
 export async function POST(request: NextRequest) {
