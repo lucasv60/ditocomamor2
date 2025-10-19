@@ -23,14 +23,13 @@ export async function POST(request: NextRequest) {
     console.log('Request body keys:', Object.keys(body))
 
     // Extract fields from JSON with safe defaults
-    const pageName = body.pageName || ''
-    const pageTitle = body.pageTitle || ''
-    const startDate = body.startDate || null
-    const loveText = body.loveText || ''
-    const youtubeUrl = body.youtubeUrl || ''
-    const customerEmail = body.customerEmail || ''
-    const customerName = body.customerName || ''
-    const photos = body.photos || []
+    const { pageData, customerEmail, customerName } = body
+    const pageName = pageData?.pageName || ''
+    const pageTitle = pageData?.pageTitle || ''
+    const startDate = pageData?.startDate || null
+    const loveText = pageData?.loveText || ''
+    const youtubeUrl = pageData?.youtubeUrl || ''
+    const photos = pageData?.photos || []
 
     console.log('=== EXTRACTED FORM FIELDS ===')
     console.log('pageName:', pageName)
@@ -72,8 +71,8 @@ export async function POST(request: NextRequest) {
     // Process photos - now photos is an array of File objects from JSON
     console.log('PHOTOS COUNT:', photos?.length || 0)
 
-    // Create pageData object from form fields
-    const pageData = {
+    // Create pageDataObject from form fields
+    const pageDataObject = {
       pageName: generatedSlug,
       pageTitle,
       startDate: formattedDate,
@@ -88,9 +87,9 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('=== PAGEDATA CREATED ===')
-    console.log('pageData:', JSON.stringify(pageData, null, 2))
+    console.log('pageDataObject:', JSON.stringify(pageDataObject, null, 2))
     console.log('=== VALIDATION PASSED ===')
-    console.log('pageData:', JSON.stringify(pageData, null, 2))
+    console.log('pageDataObject:', JSON.stringify(pageDataObject, null, 2))
     console.log('customerEmail:', customerEmail)
     console.log('customerName:', customerName)
 
@@ -210,7 +209,7 @@ export async function POST(request: NextRequest) {
     const preference = {
       items: [
         {
-          title: `Página de Amor: ${pageData.pageTitle}`,
+          title: `Página de Amor: ${pageDataObject.pageTitle}`,
           description: "Página de amor personalizada com fotos e mensagens",
           quantity: 1,
           unit_price: 1.0,
@@ -231,7 +230,7 @@ export async function POST(request: NextRequest) {
       external_reference: memoryData.id,
       metadata: {
         memory_id: memoryData.id,
-        slug: pageData.pageName,
+        slug: pageDataObject.pageName,
       },
     }
 
