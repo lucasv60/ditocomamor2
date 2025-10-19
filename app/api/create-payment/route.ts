@@ -14,19 +14,80 @@ export async function POST(request: NextRequest) {
   try {
     console.log('=== CREATE PAYMENT API STARTED ===')
     console.log('Request method:', request.method)
-    console.log('Request headers:', Object.fromEntries(request.headers))
+    console.log('Content-Type:', request.headers.get('content-type'))
 
-    const body = await request.json()
-    console.log('=== REQUEST BODY PARSED ===')
-    console.log('Raw body:', JSON.stringify(body, null, 2))
+    // Read FormData once at the top
+    console.log('=== READING FORM DATA ===')
+    const formData = await request.formData()
+    console.log('FormData keys:', Array.from(formData.keys()))
 
-    // Validate input
-    const validation = validateAndSanitize(paymentSchema, body)
-    if (!validation.success) {
-      return createSuccessResponse(null, `Dados inválidos: ${validation.errors.join(', ')}`, 400)
+    // Extract text fields using get() method
+    const pageName = formData.get('pageName') as string
+    const pageTitle = formData.get('pageTitle') as string
+    const startDate = formData.get('startDate') as string
+    const loveText = formData.get('loveText') as string
+    const youtubeUrl = formData.get('youtubeUrl') as string
+    const customerEmail = formData.get('customerEmail') as string
+    const customerName = formData.get('customerName') as string
+
+    console.log('=== EXTRACTED FORM FIELDS ===')
+    console.log('pageName:', pageName)
+    console.log('pageTitle:', pageTitle)
+    console.log('startDate:', startDate)
+    console.log('loveText:', loveText?.substring(0, 50) + '...')
+    console.log('youtubeUrl:', youtubeUrl)
+    console.log('customerEmail:', customerEmail)
+    console.log('customerName:', customerName)
+
+    // Generate slug from title
+    const generatedSlug = pageName || pageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    console.log('SLUG GERADO:', generatedSlug)
+
+    // Validate required fields
+    if (!generatedSlug || !pageTitle || !loveText) {
+      console.error('=== VALIDATION FAILED ===')
+      console.error('Missing required fields')
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Campos obrigatórios não preenchidos',
+        code: 'VALIDATION_ERROR'
+      }), { status: 400 })
     }
 
-    const { pageData, customerEmail, customerName } = validation.data
+    // Format date
+    let formattedDate = null
+    if (startDate) {
+      try {
+        const date = new Date(startDate)
+        formattedDate = date.toISOString().split('T')[0] // YYYY-MM-DD format
+        console.log('FORMATTED DATE:', formattedDate)
+      } catch (dateError) {
+        console.error('Date parsing error:', dateError)
+        formattedDate = null
+      }
+    }
+
+    // Process photos
+    const photos = formData.getAll('photos') as File[]
+    console.log('PHOTOS COUNT:', photos.length)
+
+    // Create pageData object from form fields
+    const pageData = {
+      pageName: generatedSlug,
+      pageTitle,
+      startDate: formattedDate,
+      loveText,
+      youtubeUrl: youtubeUrl || '',
+      photos: photos.map((file, index) => ({
+        file,
+        preview: '', // Will be set after upload
+        caption: `Foto ${index + 1}`,
+        public_id: ''
+      }))
+    }
+
+    console.log('=== PAGEDATA CREATED ===')
+    console.log('pageData:', JSON.stringify(pageData, null, 2))
     console.log('=== VALIDATION PASSED ===')
     console.log('pageData:', JSON.stringify(pageData, null, 2))
     console.log('customerEmail:', customerEmail)
@@ -48,22 +109,32 @@ export async function POST(request: NextRequest) {
     // Upload photos to Supabase Storage
     console.log('=== STARTING PHOTO UPLOAD ===')
     const uploadedPhotoUrls: string[] = []
-    if (pageData.photos && pageData.photos.length > 0) {
-      console.log('Found', pageData.photos.length, 'photos to upload')
-      for (const photo of pageData.photos) {
-        console.log('Processing photo:', photo.caption || 'unnamed', 'has file:', !!photo.file)
-        if (photo.file) {
-          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${photo.file.name.split('.').pop()}`
+    if (photos && photos.length > 0) {
+      console.log('Found', photos.length, 'photos to upload')
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i]
+        console.log('Processing photo', i + 1, ':', photo.name, 'size:', photo.size, 'type:', photo.type)
+
+        if (photo && photo.size > 0) {
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${photo.name.split('.').pop()}`
           console.log('Generated filename:', fileName)
 
           const { data: uploadData, error: uploadError } = await supabaseServer.storage
             .from('memories-photos')
-            .upload(fileName, photo.file)
+            .upload(fileName, photo, {
+              contentType: photo.type,
+              upsert: false
+            })
 
           if (uploadError) {
             console.error('=== PHOTO UPLOAD ERROR ===')
             console.error('Upload error for file:', fileName, 'Error:', uploadError)
-            throw new PaymentError('Erro ao fazer upload das fotos')
+            return new Response(JSON.stringify({
+              success: false,
+              error: 'Erro ao fazer upload das fotos',
+              code: 'UPLOAD_ERROR',
+              details: uploadError
+            }), { status: 500 })
           }
 
           const { data: { publicUrl } } = supabaseServer.storage
@@ -73,7 +144,7 @@ export async function POST(request: NextRequest) {
           console.log('Photo uploaded successfully. Public URL:', publicUrl)
           uploadedPhotoUrls.push(publicUrl)
         } else {
-          console.log('Photo has no file data, skipping')
+          console.log('Photo', i + 1, 'has no data or zero size, skipping')
         }
       }
     } else {
@@ -85,12 +156,12 @@ export async function POST(request: NextRequest) {
     // Create memory record in Supabase
     console.log('=== CREATING MEMORY RECORD ===')
     const dataToInsert = {
-      slug: pageData.pageName,
-      title: pageData.pageTitle,
-      love_letter_content: pageData.loveText,
-      relationship_start_date: pageData.startDate ? new Date(pageData.startDate).toISOString().split('T')[0] : null,
+      slug: generatedSlug,
+      title: pageTitle,
+      love_letter_content: loveText,
+      relationship_start_date: formattedDate,
       photos_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
-      youtube_music_url: pageData.youtubeUrl || null,
+      youtube_music_url: youtubeUrl || null,
       payment_status: 'pending'
     }
     console.log('EXACT DATA TO INSERT:', JSON.stringify(dataToInsert, null, 2))
