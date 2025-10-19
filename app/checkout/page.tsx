@@ -54,6 +54,12 @@ export default function CheckoutPage() {
 
       const data = await response.json()
 
+      if (!response.ok) {
+        console.error("API Error:", data)
+        toast.error(data.error || "Erro ao criar pagamento. Tente novamente.")
+        return
+      }
+
       if (data.init_point) {
         toast.success("Redirecionando para pagamento...")
         // Open Mercado Pago in new tab to avoid storage access issues
@@ -67,6 +73,7 @@ export default function CheckoutPage() {
           router.push("/pagamento/pendente")
         }, 2000)
       } else {
+        console.error("No init_point in response:", data)
         toast.error("Erro ao criar pagamento. Tente novamente.")
       }
     } catch (error) {
