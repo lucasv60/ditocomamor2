@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Process photos - now photos is an array of File objects from JSON
+    // Process photos - now photos is an array of objects with file data from JSON
     console.log('PHOTOS COUNT:', photos?.length || 0)
 
     // Create pageDataObject from form fields
@@ -78,8 +78,8 @@ export async function POST(request: NextRequest) {
       startDate: formattedDate,
       loveText,
       youtubeUrl: youtubeUrl || '',
-      photos: (photos || []).map((file: File, index: number) => ({
-        file,
+      photos: (photos || []).map((photoObj: any, index: number) => ({
+        file: photoObj, // The photo object itself is the file
         preview: '', // Will be set after upload
         caption: `Foto ${index + 1}`,
         public_id: ''
@@ -208,6 +208,7 @@ export async function POST(request: NextRequest) {
     const preferenceData = {
       items: [
         {
+          id: `memory-${memoryData.id}`,
           title: `Página de Amor: ${pageDataObject.pageTitle}`,
           description: "Página de amor personalizada com fotos e mensagens",
           quantity: 1,
