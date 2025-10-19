@@ -26,7 +26,7 @@ export function FormSection({ builderData, setBuilderData }: Props) {
     setBuilderData({ ...builderData, [field]: value })
   }
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
 
     // Validações de arquivo
@@ -53,46 +53,22 @@ export function FormSection({ builderData, setBuilderData }: Props) {
 
     if (invalidFiles.length > 0) return
 
-    setLoading(true)
+    // Criar URLs de preview locais
+    const newPhotos = files.map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
+      caption: "",
+    }))
 
-    try {
-      const uploadPromises = files.map(async (file) => {
-        const formData = new FormData()
-        formData.append('file', file)
-
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.error || 'Erro no upload')
-        }
-
-        const result = await response.json()
-
-        return {
-          file,
-          preview: result.url,
-          caption: "",
-          public_id: result.public_id,
-        }
-      })
-
-      const newPhotos = await Promise.all(uploadPromises)
-
-      updateData("photos", [...builderData.photos, ...newPhotos])
-      toast.success(`${files.length} foto(s) enviada(s) com sucesso!`)
-    } catch (error) {
-      console.error('Erro no upload:', error)
-      toast.error('Erro ao enviar fotos. Tente novamente.')
-    } finally {
-      setLoading(false)
-    }
+    updateData("photos", [...builderData.photos, ...newPhotos])
+    toast.success(`${files.length} foto(s) adicionada(s) com sucesso!`)
   }
 
   const removePhoto = (index: number) => {
+    const photoToRemove = builderData.photos[index]
+    if (photoToRemove && photoToRemove.preview.startsWith('blob:')) {
+      URL.revokeObjectURL(photoToRemove.preview)
+    }
     const newPhotos = builderData.photos.filter((_, i) => i !== index)
     updateData("photos", newPhotos)
   }

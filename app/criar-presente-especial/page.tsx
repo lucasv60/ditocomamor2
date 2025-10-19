@@ -30,7 +30,8 @@ export default function BuilderPage() {
       const dataToSave = {
         ...data,
         photos: data.photos.map(photo => ({
-          preview: photo.preview,
+          // Blob URLs won't persist across sessions, so we save null for preview
+          preview: photo.preview.startsWith('blob:') ? null : photo.preview,
           caption: photo.caption
         }))
       }
