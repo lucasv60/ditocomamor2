@@ -31,7 +31,7 @@ export default function BuilderPage() {
         ...data,
         photos: data.photos.map(photo => ({
           // Blob URLs won't persist across sessions, so we save null for preview
-          preview: photo.preview.startsWith('blob:') ? null : photo.preview,
+          preview: photo.preview && photo.preview.startsWith && photo.preview.startsWith('blob:') ? null : photo.preview,
           caption: photo.caption
         }))
       }
