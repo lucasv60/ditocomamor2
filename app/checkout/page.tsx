@@ -60,10 +60,10 @@ export default function CheckoutPage() {
         return
       }
 
-      if (data.init_point) {
+      if (data.data && data.data.init_point) {
         toast.success("Redirecionando para pagamento...")
         // Open Mercado Pago in new tab to avoid storage access issues
-        window.open(data.init_point, '_blank')
+        window.open(data.data.init_point, '_blank')
 
         // Clear session storage after successful payment creation
         sessionStorage.removeItem("pendingLovePage")
