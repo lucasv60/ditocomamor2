@@ -19,10 +19,18 @@ export async function POST(request: NextRequest) {
     // Read JSON body
     console.log('=== READING JSON BODY ===')
     const body = await request.json()
+    console.log('CORPO RECEBIDO:', JSON.stringify(body))
     console.log('Request body keys:', Object.keys(body))
 
-    // Extract fields from JSON
-    const { pageName, pageTitle, startDate, loveText, youtubeUrl, customerEmail, customerName, photos } = body
+    // Extract fields from JSON with safe defaults
+    const pageName = body.pageName || ''
+    const pageTitle = body.pageTitle || ''
+    const startDate = body.startDate || null
+    const loveText = body.loveText || ''
+    const youtubeUrl = body.youtubeUrl || ''
+    const customerEmail = body.customerEmail || ''
+    const customerName = body.customerName || ''
+    const photos = body.photos || []
 
     console.log('=== EXTRACTED FORM FIELDS ===')
     console.log('pageName:', pageName)
@@ -34,7 +42,7 @@ export async function POST(request: NextRequest) {
     console.log('customerName:', customerName)
 
     // Generate slug from title
-    const generatedSlug = pageName || pageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const generatedSlug = pageName || (pageTitle ? pageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : '')
     console.log('SLUG GERADO:', generatedSlug)
 
     // Validate required fields
