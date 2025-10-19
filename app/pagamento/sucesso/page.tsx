@@ -56,13 +56,16 @@ export default function PaymentSuccessPage() {
         }
 
         // Get memory data from Supabase using preference_id
-        const { data: memory, error: fetchError } = await fetch(`/api/memory/${preferenceId}`).then(r => r.json())
+        const memoryResponse = await fetch(`/api/memory/${preferenceId}`)
+        const memoryData = await memoryResponse.json()
 
-        if (fetchError || !memory) {
-          console.error("Memory not found for preference_id:", preferenceId)
+        if (!memoryResponse.ok || !memoryData) {
+          console.error("Memory not found for preference_id:", preferenceId, memoryData)
           toast.error("Página não encontrada. Entre em contato com o suporte.")
           return
         }
+
+        const memory = memoryData
 
         // Generate clean URL for the memory page
         const cleanUrl = `${window.location.origin}/memory/${memory.slug}`

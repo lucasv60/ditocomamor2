@@ -14,19 +14,38 @@ export default function PaymentPendingPage() {
     // Check payment status every 10 seconds
     const checkPaymentStatus = async () => {
       try {
-        // This would typically check a status endpoint, but for now we'll simulate
-        // In a real implementation, you'd have an API endpoint to check payment status
-        setStatus('checking')
+        // Get preference_id from URL params if available
+        const urlParams = new URLSearchParams(window.location.search)
+        const preferenceId = urlParams.get('preference_id')
 
-        // Simulate checking - in real app, call an API
-        setTimeout(() => {
-          setStatus('pending') // Keep pending for demo
-        }, 2000)
+        if (preferenceId) {
+          setStatus('checking')
+
+          // Check if payment was completed by looking for success page
+          const successUrl = `${window.location.origin}/pagamento/sucesso?preference_id=${preferenceId}`
+
+          // Try to fetch the success page to see if payment was processed
+          try {
+            const response = await fetch(successUrl, { method: 'HEAD' })
+            if (response.ok) {
+              // Payment was processed, redirect to success page
+              window.location.href = successUrl
+              return
+            }
+          } catch (error) {
+            // Continue checking
+          }
+
+          setStatus('pending')
+        }
       } catch (error) {
         console.error('Error checking payment status:', error)
+        setStatus('pending')
       }
     }
 
+    // Check immediately and then every 10 seconds
+    checkPaymentStatus()
     const interval = setInterval(checkPaymentStatus, 10000)
     return () => clearInterval(interval)
   }, [])
