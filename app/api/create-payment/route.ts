@@ -40,8 +40,34 @@ export async function POST(request: NextRequest) {
     console.log('customerEmail:', customerEmail)
     console.log('customerName:', customerName)
 
-    // Generate slug from title
-    const generatedSlug = pageName || (pageTitle ? pageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : '')
+    // Generate slug from title with uniqueness check
+    let baseSlug = pageName || (pageTitle ? pageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : '')
+    let generatedSlug = baseSlug
+    let counter = 1
+
+    // Check if slug exists and generate unique one
+    while (true) {
+      try {
+        const { data: existingMemory } = await supabaseServer
+          .from('memories')
+          .select('id')
+          .eq('slug', generatedSlug)
+          .single()
+
+        if (!existingMemory) {
+          // Slug is available
+          break
+        }
+
+        // Slug exists, increment counter
+        generatedSlug = `${baseSlug}-${counter}`
+        counter++
+      } catch (error) {
+        // If error (slug doesn't exist), it's available
+        break
+      }
+    }
+
     console.log('SLUG GERADO:', generatedSlug)
 
     // Validate required fields
