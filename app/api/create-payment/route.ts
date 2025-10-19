@@ -16,19 +16,13 @@ export async function POST(request: NextRequest) {
     console.log('Request method:', request.method)
     console.log('Content-Type:', request.headers.get('content-type'))
 
-    // Read FormData once at the top
-    console.log('=== READING FORM DATA ===')
-    const formData = await request.formData()
-    console.log('FormData keys:', Array.from(formData.keys()))
+    // Read JSON body
+    console.log('=== READING JSON BODY ===')
+    const body = await request.json()
+    console.log('Request body keys:', Object.keys(body))
 
-    // Extract text fields using get() method
-    const pageName = formData.get('pageName') as string
-    const pageTitle = formData.get('pageTitle') as string
-    const startDate = formData.get('startDate') as string
-    const loveText = formData.get('loveText') as string
-    const youtubeUrl = formData.get('youtubeUrl') as string
-    const customerEmail = formData.get('customerEmail') as string
-    const customerName = formData.get('customerName') as string
+    // Extract fields from JSON
+    const { pageName, pageTitle, startDate, loveText, youtubeUrl, customerEmail, customerName, photos } = body
 
     console.log('=== EXTRACTED FORM FIELDS ===')
     console.log('pageName:', pageName)
@@ -67,9 +61,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Process photos
-    const photos = formData.getAll('photos') as File[]
-    console.log('PHOTOS COUNT:', photos.length)
+    // Process photos - now photos is an array of File objects from JSON
+    console.log('PHOTOS COUNT:', photos?.length || 0)
 
     // Create pageData object from form fields
     const pageData = {
@@ -78,7 +71,7 @@ export async function POST(request: NextRequest) {
       startDate: formattedDate,
       loveText,
       youtubeUrl: youtubeUrl || '',
-      photos: photos.map((file, index) => ({
+      photos: (photos || []).map((file: File, index: number) => ({
         file,
         preview: '', // Will be set after upload
         caption: `Foto ${index + 1}`,
