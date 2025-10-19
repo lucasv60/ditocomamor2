@@ -8,7 +8,7 @@ console.log('=== SUPABASE CLIENT VERIFICATION ===')
 console.log('Using supabaseServer client for database operations')
 console.log('Client type check:', typeof supabaseServer)
 console.log('Client has from method:', typeof supabaseServer.from)
-import * as mercadopago from 'mercadopago'
+import { MercadoPagoConfig, Preference } from 'mercadopago'
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,9 +101,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Configure Mercado Pago
-    const mercadopagoClient = require('mercadopago')
-    mercadopagoClient.configure({
-      access_token: MERCADO_PAGO_ACCESS_TOKEN
+    const client = new MercadoPagoConfig({
+      accessToken: MERCADO_PAGO_ACCESS_TOKEN
     })
 
     // Upload photos to Supabase Storage
@@ -206,7 +205,7 @@ export async function POST(request: NextRequest) {
     // This code block is now inside the try-catch above
 
     // Create payment preference with IPN notification URL
-    const preference = {
+    const preferenceData = {
       items: [
         {
           title: `Página de Amor: ${pageDataObject.pageTitle}`,
@@ -234,21 +233,23 @@ export async function POST(request: NextRequest) {
       },
     }
 
-    const preferenceResponse = await mercadopagoClient.preferences.create(preference)
+    const preference = new Preference(client)
+    const preferenceResponse = await preference.create({ body: preferenceData })
 
-    if (!preferenceResponse || !preferenceResponse.body) {
+    if (!preferenceResponse) {
       throw new PaymentError('Erro ao criar preferência de pagamento')
     }
 
-    const preferenceData = preferenceResponse.body
+    console.log('=== PREFERENCE RESPONSE ===')
+    console.log('Response:', preferenceResponse)
 
     // Update memory with preference_id
     console.log('=== UPDATING MEMORY WITH PREFERENCE ID ===')
-    console.log('Updating memory ID:', memoryData.id, 'with preference_id:', preferenceData.id)
+    console.log('Updating memory ID:', memoryData.id, 'with preference_id:', preferenceResponse.id)
 
     const { error: updateError } = await supabaseServer
       .from('memories')
-      .update({ preference_id: preferenceData.id })
+      .update({ preference_id: preferenceResponse.id })
       .eq('id', memoryData.id)
 
     if (updateError) {
@@ -262,8 +263,8 @@ export async function POST(request: NextRequest) {
     }
 
     return createSuccessResponse({
-      init_point: preferenceData.init_point,
-      preference_id: preferenceData.id,
+      init_point: preferenceResponse.init_point,
+      preference_id: preferenceResponse.id,
     }, 'Preferência de pagamento criada com sucesso')
   } catch (error) {
     return handleApiError(error)
