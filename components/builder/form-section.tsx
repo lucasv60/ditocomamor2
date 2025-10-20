@@ -26,7 +26,7 @@ export function FormSection({ builderData, setBuilderData }: Props) {
     setBuilderData({ ...builderData, [field]: value })
   }
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
 
     // Validações de arquivo
@@ -53,22 +53,61 @@ export function FormSection({ builderData, setBuilderData }: Props) {
 
     if (invalidFiles.length > 0) return
 
-    // Criar URLs de preview locais
-    const newPhotos = files.map(file => ({
-      file,
-      preview: URL.createObjectURL(file),
-      caption: "",
-    }))
+    setLoading(true)
 
-    updateData("photos", [...builderData.photos, ...newPhotos])
-    toast.success(`${files.length} foto(s) adicionada(s) com sucesso!`)
+    try {
+      // Upload each photo immediately to Supabase
+      const uploadedPhotos = []
+
+      for (const file of files) {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('caption', '')
+
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        })
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          console.error('Upload failed:', result)
+          toast.error(`Erro ao enviar "${file.name}": ${result.error}`)
+          continue
+        }
+
+        // Add uploaded photo to the list
+        uploadedPhotos.push({
+          preview: result.data.url, // Use the uploaded URL directly
+          caption: result.data.caption || "",
+          public_id: result.data.fileName,
+          uploaded: true // Mark as uploaded
+        })
+      }
+
+      if (uploadedPhotos.length > 0) {
+        updateData("photos", [...builderData.photos, ...uploadedPhotos])
+        toast.success(`${uploadedPhotos.length} foto(s) enviada(s) com sucesso!`)
+      }
+
+      // Clear the input
+      if (e.target) {
+        e.target.value = ''
+      }
+
+    } catch (error) {
+      console.error('Upload error:', error)
+      toast.error('Erro ao enviar fotos. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const removePhoto = (index: number) => {
     const photoToRemove = builderData.photos[index]
-    if (photoToRemove && photoToRemove.preview.startsWith('blob:')) {
-      URL.revokeObjectURL(photoToRemove.preview)
-    }
+    // Note: We don't revoke blob URLs anymore since photos are uploaded immediately
+    // and we use the uploaded URLs directly
     const newPhotos = builderData.photos.filter((_, i) => i !== index)
     updateData("photos", newPhotos)
   }
@@ -151,6 +190,8 @@ export function FormSection({ builderData, setBuilderData }: Props) {
       photos: builderData.photos.map((photo) => ({
         preview: photo.preview,
         caption: photo.caption.trim(),
+        public_id: (photo as any).public_id,
+        uploaded: (photo as any).uploaded,
       })),
     }
 

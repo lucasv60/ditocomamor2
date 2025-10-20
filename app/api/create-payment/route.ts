@@ -94,8 +94,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Process photos - now photos is an array of objects with file data from JSON
+    // Process photos - now photos is an array of objects with uploaded URLs
     console.log('PHOTOS COUNT:', photos?.length || 0)
+
+    // Extract photo URLs from the uploaded photos
+    const uploadedPhotoUrls: string[] = []
+    if (photos && photos.length > 0) {
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i]
+        console.log('Processing uploaded photo', i + 1, ':', photo)
+
+        // Photo should already be uploaded, just extract the URL
+        if (photo && photo.preview) {
+          uploadedPhotoUrls.push(photo.preview)
+          console.log('Added photo URL:', photo.preview)
+        } else {
+          console.log('Photo', i + 1, 'has no preview URL, skipping')
+        }
+      }
+    }
+    console.log('=== PHOTO PROCESSING COMPLETE ===')
+    console.log('Total processed photos:', uploadedPhotoUrls.length)
 
     // Create pageDataObject from form fields
     const pageDataObject = {
@@ -105,81 +124,16 @@ export async function POST(request: NextRequest) {
       loveText,
       youtubeUrl: youtubeUrl || '',
       photos: (photos || []).map((photoObj: any, index: number) => ({
-        file: photoObj, // The photo object itself is the file
-        preview: '', // Will be set after upload
-        caption: `Foto ${index + 1}`,
-        public_id: ''
+        preview: photoObj.preview,
+        caption: photoObj.caption || `Foto ${index + 1}`,
+        public_id: photoObj.public_id || ''
       }))
     }
 
     console.log('=== PAGEDATA CREATED ===')
     console.log('pageDataObject:', JSON.stringify(pageDataObject, null, 2))
-    console.log('=== VALIDATION PASSED ===')
-    console.log('pageDataObject:', JSON.stringify(pageDataObject, null, 2))
     console.log('customerEmail:', customerEmail)
     console.log('customerName:', customerName)
-
-    // Mercado Pago API configuration (only if not skipping payment)
-    let client: any = null
-    if (!skipPayment) {
-      const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN
-
-      if (!MERCADO_PAGO_ACCESS_TOKEN) {
-        throw new PaymentError('Mercado Pago não configurado')
-      }
-
-      // Configure Mercado Pago
-      client = new MercadoPagoConfig({
-        accessToken: MERCADO_PAGO_ACCESS_TOKEN
-      })
-    }
-
-    // Upload photos to Supabase Storage
-    console.log('=== STARTING PHOTO UPLOAD ===')
-    const uploadedPhotoUrls: string[] = []
-    if (photos && photos.length > 0) {
-      console.log('Found', photos.length, 'photos to upload')
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i]
-        console.log('Processing photo', i + 1, ':', photo.name, 'size:', photo.size, 'type:', photo.type)
-
-        if (photo && photo.size > 0) {
-          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${photo.name.split('.').pop()}`
-          console.log('Generated filename:', fileName)
-
-          const { data: uploadData, error: uploadError } = await supabaseServer.storage
-            .from('memories-photos')
-            .upload(fileName, photo, {
-              contentType: photo.type,
-              upsert: false
-            })
-
-          if (uploadError) {
-            console.error('=== PHOTO UPLOAD ERROR ===')
-            console.error('Upload error for file:', fileName, 'Error:', uploadError)
-            return new Response(JSON.stringify({
-              success: false,
-              error: 'Erro ao fazer upload das fotos',
-              code: 'UPLOAD_ERROR',
-              details: uploadError
-            }), { status: 500 })
-          }
-
-          const { data: { publicUrl } } = supabaseServer.storage
-            .from('memories-photos')
-            .getPublicUrl(fileName)
-
-          console.log('Photo uploaded successfully. Public URL:', publicUrl)
-          uploadedPhotoUrls.push(publicUrl)
-        } else {
-          console.log('Photo', i + 1, 'has no data or zero size, skipping')
-        }
-      }
-    } else {
-      console.log('No photos to upload')
-    }
-    console.log('=== PHOTO UPLOAD COMPLETE ===')
-    console.log('Total uploaded photos:', uploadedPhotoUrls.length)
 
     // Create memory record in Supabase
     console.log('=== CREATING MEMORY RECORD ===')
@@ -239,6 +193,21 @@ export async function POST(request: NextRequest) {
       return createSuccessResponse({
         slug: memoryData.slug,
       }, 'Página criada com sucesso')
+    }
+
+    // Mercado Pago API configuration (only if not skipping payment)
+    let client: any = null
+    if (!skipPayment) {
+      const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN
+
+      if (!MERCADO_PAGO_ACCESS_TOKEN) {
+        throw new PaymentError('Mercado Pago não configurado')
+      }
+
+      // Configure Mercado Pago
+      client = new MercadoPagoConfig({
+        accessToken: MERCADO_PAGO_ACCESS_TOKEN
+      })
     }
 
     // Create payment preference with IPN notification URL (only if client is configured)
