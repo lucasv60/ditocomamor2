@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     console.log('Request body keys:', Object.keys(body))
 
     // Extract fields from JSON with safe defaults
-    const { pageData, customerEmail, customerName } = body
+    const { pageData, customerEmail, customerName, skipPayment } = body
     const pageName = pageData?.pageName || ''
     const pageTitle = pageData?.pageTitle || ''
     const startDate = pageData?.startDate || null
@@ -119,17 +119,20 @@ export async function POST(request: NextRequest) {
     console.log('customerEmail:', customerEmail)
     console.log('customerName:', customerName)
 
-    // Mercado Pago API configuration
-    const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN
+    // Mercado Pago API configuration (only if not skipping payment)
+    let client: any = null
+    if (!skipPayment) {
+      const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN
 
-    if (!MERCADO_PAGO_ACCESS_TOKEN) {
-      throw new PaymentError('Mercado Pago não configurado')
+      if (!MERCADO_PAGO_ACCESS_TOKEN) {
+        throw new PaymentError('Mercado Pago não configurado')
+      }
+
+      // Configure Mercado Pago
+      client = new MercadoPagoConfig({
+        accessToken: MERCADO_PAGO_ACCESS_TOKEN
+      })
     }
-
-    // Configure Mercado Pago
-    const client = new MercadoPagoConfig({
-      accessToken: MERCADO_PAGO_ACCESS_TOKEN
-    })
 
     // Upload photos to Supabase Storage
     console.log('=== STARTING PHOTO UPLOAD ===')
@@ -187,7 +190,7 @@ export async function POST(request: NextRequest) {
       relationship_start_date: formattedDate,
       photos_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
       youtube_music_url: youtubeUrl || null,
-      payment_status: 'pending'
+      payment_status: skipPayment ? 'paid' : 'pending'
     }
     console.log('EXACT DATA TO INSERT:', JSON.stringify(dataToInsert, null, 2))
 
@@ -230,7 +233,15 @@ export async function POST(request: NextRequest) {
 
     // This code block is now inside the try-catch above
 
-    // Create payment preference with IPN notification URL
+    // Skip Mercado Pago if skipPayment flag is set
+    if (skipPayment) {
+      console.log('=== SKIPPING MERCADO PAGO - RETURNING SUCCESS ===')
+      return createSuccessResponse({
+        slug: memoryData.slug,
+      }, 'Página criada com sucesso')
+    }
+
+    // Create payment preference with IPN notification URL (only if client is configured)
     const preferenceData = {
       items: [
         {

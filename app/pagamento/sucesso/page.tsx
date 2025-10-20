@@ -18,34 +18,58 @@ export default function PaymentSuccessPage() {
   useEffect(() => {
     const processPayment = async () => {
       try {
-        // Get payment details from Mercado Pago URL parameters
+        // Check if we have a slug parameter (direct creation) or Mercado Pago params
+        const slug = searchParams.get("slug")
         const paymentId = searchParams.get("payment_id")
         const preferenceId = searchParams.get("preference_id")
         const status = searchParams.get("status")
 
-        console.log("Payment success params:", { paymentId, preferenceId, status })
+        console.log("Payment success params:", { slug, paymentId, preferenceId, status })
 
-        if (!paymentId || !preferenceId) {
-          toast.error("Informações de pagamento incompletas.")
-          router.push("/pagamento/pendente")
+        let memory: any = null
+
+        if (slug) {
+          // Direct creation - get memory by slug
+          console.log("Direct creation - fetching memory by slug:", slug)
+          const memoryResponse = await fetch(`/api/memory/${slug}`)
+          const memoryData = await memoryResponse.json()
+
+          if (!memoryResponse.ok || !memoryData) {
+            console.error("Memory not found for slug:", slug, memoryData)
+            toast.error("Página não encontrada. Entre em contato com o suporte.")
+            return
+          }
+
+          memory = memoryData
+        } else if (preferenceId) {
+          // Mercado Pago flow - get memory by preference_id
+          console.log("Mercado Pago flow - fetching memory by preference_id:", preferenceId)
+
+          if (!paymentId || !preferenceId) {
+            toast.error("Informações de pagamento incompletas.")
+            router.push("/pagamento/pendente")
+            return
+          }
+
+          // Skip Mercado Pago verification for now - trust the redirect from MP
+          // In production, you should verify payment status with Mercado Pago API
+          console.log("Payment verification skipped - proceeding with memory lookup")
+
+          const memoryResponse = await fetch(`/api/memory/${preferenceId}`)
+          const memoryData = await memoryResponse.json()
+
+          if (!memoryResponse.ok || !memoryData) {
+            console.error("Memory not found for preference_id:", preferenceId, memoryData)
+            toast.error("Página não encontrada. Entre em contato com o suporte.")
+            return
+          }
+
+          memory = memoryData
+        } else {
+          toast.error("Parâmetros de acesso inválidos.")
+          router.push("/")
           return
         }
-
-        // Skip Mercado Pago verification for now - trust the redirect from MP
-        // In production, you should verify payment status with Mercado Pago API
-        console.log("Payment verification skipped - proceeding with memory lookup")
-
-        // Get memory data from Supabase using preference_id
-        const memoryResponse = await fetch(`/api/memory/${preferenceId}`)
-        const memoryData = await memoryResponse.json()
-
-        if (!memoryResponse.ok || !memoryData) {
-          console.error("Memory not found for preference_id:", preferenceId, memoryData)
-          toast.error("Página não encontrada. Entre em contato com o suporte.")
-          return
-        }
-
-        const memory = memoryData
 
         // Generate clean URL for the memory page
         const cleanUrl = `${window.location.origin}/memory/${memory.slug}`
@@ -70,10 +94,10 @@ export default function PaymentSuccessPage() {
           toast.error("Erro ao gerar QR code, mas o link está disponível")
         }
 
-        toast.success("Pagamento confirmado! Sua página de amor está pronta.")
+        toast.success("Página criada com sucesso! Sua página de amor está pronta.")
       } catch (error) {
         console.error("Error processing payment success:", error)
-        toast.error("Erro ao processar confirmação do pagamento.")
+        toast.error("Erro ao processar confirmação.")
       } finally {
         setLoading(false)
       }

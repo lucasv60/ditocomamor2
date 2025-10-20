@@ -39,7 +39,7 @@ export default function CheckoutPage() {
     setLoading(true)
 
     try {
-      // Create payment preference
+      // TEMPORARY: Skip Mercado Pago and create memory directly with paid status
       const response = await fetch("/api/create-payment", {
         method: "POST",
         headers: {
@@ -49,6 +49,7 @@ export default function CheckoutPage() {
           pageData,
           customerEmail: email.trim(),
           customerName: name.trim(),
+          skipPayment: true, // Flag to skip Mercado Pago
         }),
       })
 
@@ -56,29 +57,25 @@ export default function CheckoutPage() {
 
       if (!response.ok) {
         console.error("API Error:", data)
-        toast.error(data.error || "Erro ao criar pagamento. Tente novamente.")
+        toast.error(data.error || "Erro ao criar página. Tente novamente.")
         return
       }
 
-      if (data.data && data.data.init_point) {
-        toast.success("Redirecionando para pagamento...")
-        // Open Mercado Pago in new tab to avoid storage access issues
-        window.open(data.data.init_point, '_blank')
+      if (data.data && data.data.slug) {
+        toast.success("Página criada com sucesso!")
 
-        // Clear session storage after successful payment creation
+        // Clear session storage after successful creation
         sessionStorage.removeItem("pendingLovePage")
 
-        // Redirect to pending payment page
-        setTimeout(() => {
-          router.push("/pagamento/pendente")
-        }, 2000)
+        // Redirect directly to success page with slug
+        router.push(`/pagamento/sucesso?slug=${data.data.slug}`)
       } else {
-        console.error("No init_point in response:", data)
-        toast.error("Erro ao criar pagamento. Tente novamente.")
+        console.error("No slug in response:", data)
+        toast.error("Erro ao criar página. Tente novamente.")
       }
     } catch (error) {
-      console.error("Erro ao processar pagamento:", error)
-      toast.error("Erro ao processar pagamento. Verifique sua conexão e tente novamente.")
+      console.error("Erro ao processar criação:", error)
+      toast.error("Erro ao processar criação. Verifique sua conexão e tente novamente.")
     } finally {
       setLoading(false)
     }
@@ -196,9 +193,9 @@ export default function CheckoutPage() {
                 />
               </div>
 
-              <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4 mt-6">
-                <p className="text-sm text-blue-300">
-                  Você será redirecionado para o Mercado Pago para completar o pagamento de forma segura.
+              <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-4 mt-6">
+                <p className="text-sm text-green-300">
+                  Sua página será criada imediatamente após confirmar os dados.
                 </p>
               </div>
 
@@ -207,13 +204,9 @@ export default function CheckoutPage() {
                 disabled={loading}
                 className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-lg py-6 font-semibold mt-6"
               >
-                {loading ? "Processando..." : "Pagar com Mercado Pago"}
+                {loading ? "Criando página..." : "Criar Página de Amor"}
               </Button>
 
-              <div className="flex items-center justify-center gap-2 mt-4">
-                <img src="/mercado-pago-logo.png" alt="Mercado Pago" className="h-6" />
-                <span className="text-xs text-gray-500">Pagamento seguro</span>
-              </div>
             </div>
           </Card>
         </div>

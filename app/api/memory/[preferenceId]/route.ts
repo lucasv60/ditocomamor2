@@ -15,12 +15,21 @@ export async function GET(
       })
     }
 
-    // Fetch memory data by preference_id
-    const { data: memory, error } = await supabaseServer
+    // Fetch memory data by preference_id or slug
+    let query = supabaseServer
       .from('memories')
       .select('id, slug, title, payment_status')
-      .eq('preference_id', preferenceId)
-      .single()
+
+    // Check if preferenceId looks like a slug (contains letters) or preference_id (numeric)
+    if (isNaN(Number(preferenceId))) {
+      // It's a slug
+      query = query.eq('slug', preferenceId)
+    } else {
+      // It's a preference_id
+      query = query.eq('preference_id', preferenceId)
+    }
+
+    const { data: memory, error } = await query.single()
 
     if (error || !memory) {
       return new Response(JSON.stringify({ error: 'Memory not found' }), {
