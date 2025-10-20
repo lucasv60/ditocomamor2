@@ -181,20 +181,8 @@ export function RomanticPreview({ builderData }: Props) {
         {builderData.loveText && (
           <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-rose-500/20">
             <h2 className="text-xl font-bold text-rose-400 mb-3 text-center">Minha Carta de Amor</h2>
-            <div className="text-rose-300 text-sm leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto cursor-pointer hover:bg-gray-800/50 transition-colors rounded-lg p-2" onClick={() => {
-              // Simple expand/collapse functionality
-              const element = document.querySelector('.love-letter-content')
-              if (element) {
-                element.classList.toggle('max-h-96')
-                element.classList.toggle('max-h-none')
-              }
-            }}>
-              <div className="love-letter-content max-h-96 overflow-hidden">
-                {builderData.loveText}
-              </div>
-              <div className="text-center text-rose-400/70 text-xs mt-2">
-                💌 Clique para expandir/colapsar a carta
-              </div>
+            <div className="text-rose-300 text-sm leading-relaxed whitespace-pre-wrap">
+              {builderData.loveText}
             </div>
           </div>
         )}
