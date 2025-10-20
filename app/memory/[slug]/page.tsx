@@ -120,7 +120,7 @@ export default async function MemoryPage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-red-50">
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
       <RomanticPreview builderData={pageData} />
     </div>
   )
