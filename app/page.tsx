@@ -76,9 +76,33 @@ export default function HomePage() {
 
           {/* Right Content - Mockups */}
           <div className="relative min-h-[400px] lg:min-h-[500px]">
-            <div className="relative z-10">
+            <div className="flex flex-col items-center gap-8 lg:gap-12">
+              {/* Desktop Mockup - Only on large screens */}
+              <div className="hidden lg:block w-[400px]">
+                <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-2 shadow-2xl border border-gray-700">
+                  <div className="bg-black rounded-xl overflow-hidden">
+                    <div className="bg-gray-900 px-4 py-2 flex items-center gap-2 border-b border-gray-800">
+                      <div className="flex gap-1.5">
+                        <div className="w-3 h-3 rounded-full bg-red-500" />
+                        <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                        <div className="w-3 h-3 rounded-full bg-green-500" />
+                      </div>
+                    </div>
+                    <div className="p-6 bg-gradient-to-br from-gray-900 to-black">
+                      <Image
+                        src="/romantic-couple.png"
+                        alt="Couple photo"
+                        width={400}
+                        height={300}
+                        className="w-full rounded-lg"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Mobile Mockup */}
-              <div className="relative w-[280px] mx-auto">
+              <div className="relative w-[280px]">
                 <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-[3rem] p-3 shadow-2xl border border-gray-700">
                   <div className="bg-black rounded-[2.5rem] overflow-hidden">
                     {/* Status Bar */}
@@ -117,29 +141,6 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Desktop Mockup - Positioned behind */}
-              <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[400px] hidden lg:block z-0">
-                <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-2 shadow-2xl border border-gray-700">
-                  <div className="bg-black rounded-xl overflow-hidden">
-                    <div className="bg-gray-900 px-4 py-2 flex items-center gap-2 border-b border-gray-800">
-                      <div className="flex gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-red-500" />
-                        <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                        <div className="w-3 h-3 rounded-full bg-green-500" />
-                      </div>
-                    </div>
-                    <div className="p-6 bg-gradient-to-br from-gray-900 to-black">
-                      <Image
-                        src="/romantic-couple.png"
-                        alt="Couple photo"
-                        width={400}
-                        height={300}
-                        className="w-full rounded-lg"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* User Counter */}
