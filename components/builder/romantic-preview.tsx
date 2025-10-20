@@ -169,7 +169,7 @@ export function RomanticPreview({ builderData }: Props) {
                 )}
               </div>
               {builderData.photos[currentPhotoIndex].caption && (
-                <p className="text-center text-sm text-rose-800 font-semibold mt-2">
+                <p className="text-center text-sm text-rose-300 font-semibold mt-2">
                   {builderData.photos[currentPhotoIndex].caption}
                 </p>
               )}
