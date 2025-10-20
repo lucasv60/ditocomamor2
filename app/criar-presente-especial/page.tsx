@@ -9,7 +9,7 @@ export type BuilderData = {
   pageName: string
   pageTitle: string
   startDate: Date | null
-  photos: Array<{ file: File; preview: string; caption: string }>
+  photos: Array<{ file?: File; preview: string; caption: string; public_id?: string; uploaded?: boolean }>
   loveText: string
   youtubeUrl: string
 }
@@ -30,9 +30,11 @@ export default function BuilderPage() {
       const dataToSave = {
         ...data,
         photos: data.photos.map(photo => ({
-          // Blob URLs won't persist across sessions, so we save null for preview
-          preview: photo.preview && photo.preview.startsWith && photo.preview.startsWith('blob:') ? null : photo.preview,
-          caption: photo.caption
+          // Save uploaded photos with their URLs, blob URLs are temporary
+          preview: photo.uploaded ? photo.preview : (photo.preview && photo.preview.startsWith && photo.preview.startsWith('blob:') ? null : photo.preview),
+          caption: photo.caption,
+          public_id: photo.public_id,
+          uploaded: photo.uploaded
         }))
       }
       localStorage.setItem('love-page-draft', JSON.stringify(dataToSave))
