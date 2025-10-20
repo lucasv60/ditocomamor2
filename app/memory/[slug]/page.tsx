@@ -127,7 +127,9 @@ export default async function MemoryPage({ params }: PageProps) {
   return (
     <EnvelopeWrapper>
       <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
-        <RomanticPreview builderData={pageData} />
+        <div className="container mx-auto px-4 max-w-3xl">
+          <RomanticPreview builderData={pageData} />
+        </div>
       </div>
     </EnvelopeWrapper>
   )
