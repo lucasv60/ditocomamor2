@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Heart } from "lucide-react"
 
 interface EnvelopeWrapperProps {
   children: React.ReactNode
@@ -10,15 +8,12 @@ interface EnvelopeWrapperProps {
 
 export function EnvelopeWrapper({ children }: EnvelopeWrapperProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [showAnimation, setShowAnimation] = useState(false)
 
   useEffect(() => {
     // Check if envelope was already opened in this session
     const envelopeOpened = sessionStorage.getItem('envelope-opened')
     if (envelopeOpened === 'true') {
       setIsOpen(true)
-    } else {
-      setShowAnimation(true)
     }
   }, [])
 
@@ -32,82 +27,110 @@ export function EnvelopeWrapper({ children }: EnvelopeWrapperProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center p-4">
-      {/* Floating Roses and Hearts */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute text-2xl animate-petalFall opacity-60"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `-${Math.random() * 100}px`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${8 + Math.random() * 4}s`,
-            }}
-          >
-            {i % 3 === 0 ? "🌹" : i % 3 === 1 ? "❤️" : "💕"}
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="container relative w-full max-w-3xl mx-auto cursor-pointer" onClick={handleOpenEnvelope}>
+        <div className="perspective-wrapper w-full h-[500px] flex items-center justify-center" style={{ perspective: '1000px' }}>
+          <div className="card-wrapper relative w-full h-full flex items-center justify-center" style={{ transformStyle: 'preserve-3d', transition: 'all 0.5s ease' }}>
+            <div className="envelope-container relative w-[450px] h-[320px] overflow-hidden rounded-md border-4 border-rose-500">
+              <div className="envelope-body absolute inset-0 bg-gradient-to-br from-rose-100 to-pink-200 to-rose-300 shadow-2xl" style={{ transition: 'all 0.5s ease' }}>
+                <div className="inner-border absolute inset-4 border-2 border-rose-500/30 rounded-sm"></div>
+
+                {/* Floating hearts */}
+                <div className="floating-heart absolute opacity-0 top-20 left-8" style={{ animation: 'floatUp 2s ease-out forwards' }}>
+                  <svg className="w-6 h-6 text-rose-500" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="currentColor"/>
+                  </svg>
+                </div>
+                <div className="floating-heart absolute opacity-0 top-20 right-12" style={{ animation: 'floatUp 2s ease-out forwards', animationDelay: '0.2s' }}>
+                  <svg className="w-5 h-5 text-pink-600" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="currentColor"/>
+                  </svg>
+                </div>
+                <div className="floating-heart absolute opacity-0 bottom-12 left-16" style={{ animation: 'floatUp 2s ease-out forwards', animationDelay: '0.4s' }}>
+                  <svg className="w-6 h-6 text-red-600" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="currentColor"/>
+                  </svg>
+                </div>
+              </div>
+
+              {/* Envelope flap */}
+              <div className="envelope-flap absolute top-0 left-1/2 transform -translate-x-1/2 w-[450px] h-40 z-20">
+                <div className="flap-background absolute inset-0 bg-gradient-to-br from-rose-300 to-pink-300" style={{ clipPath: 'polygon(0 0, 50% 100%, 100% 0)' }}></div>
+                <div className="flap-border-left absolute top-0 left-0 w-full h-full border-l-4 border-red-700" style={{ clipPath: 'polygon(0 0, 50% 100%, 50% 100%, 0 0)', transformOrigin: 'top left' }}></div>
+                <div className="flap-border-right absolute top-0 right-0 w-full h-full border-r-4 border-red-700" style={{ clipPath: 'polygon(100% 0, 50% 100%, 50% 100%, 100% 0)', transformOrigin: 'top right' }}></div>
+              </div>
+
+              {/* Seal */}
+              <div className="seal absolute top-16 left-1/2 transform -translate-x-1/2 w-20 h-20 bg-gradient-to-br from-rose-500 to-pink-600 rounded-full flex items-center justify-center shadow-xl z-30">
+                <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="currentColor"/>
+                </svg>
+              </div>
+            </div>
           </div>
-        ))}
-      </div>
 
-      <div className="text-center space-y-8 relative z-10">
-        {/* Envelope SVG */}
-        <div className="mx-auto w-64 h-48 relative">
-          <svg
-            viewBox="0 0 256 192"
-            className={`w-full h-full transition-all duration-1000 ${showAnimation ? 'animate-pulse' : ''}`}
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {/* Envelope body */}
-            <path
-              d="M20 40 L236 40 L236 152 L20 152 Z"
-              fill="#DC2626"
-              stroke="#B91C1C"
-              strokeWidth="2"
-            />
-            {/* Envelope flap */}
-            <path
-              d="M20 40 L128 96 L236 40"
-              fill="#F87171"
-              stroke="#B91C1C"
-              strokeWidth="2"
-            />
-            {/* Heart on envelope */}
-            <path
-              d="M128 80 C118 70, 108 70, 108 78 C108 82, 113 86, 118 90 C113 94, 108 98, 108 102 C108 110, 118 110, 128 100 C138 110, 148 110, 148 102 C148 98, 143 94, 138 90 C143 86, 148 82, 148 78 C148 70, 138 70, 128 80 Z"
-              fill="#FFFFFF"
-            />
-          </svg>
+          {/* Glow effect */}
+          <div className="glow-effect absolute inset-0 bg-rose-500/30 rounded-full blur-[60px] opacity-0" style={{ animation: 'pulse 2s ease-in-out infinite' }}></div>
         </div>
 
-        {/* Message */}
-        <div className="space-y-4">
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-rose-400 to-pink-400 bg-clip-text text-transparent">
-            Você Recebeu uma Carta de Amor! 💌
-          </h1>
-          <p className="text-gray-300 text-lg max-w-md mx-auto">
-            Uma mensagem especial está esperando por você. Clique no envelope para abrir e descobrir o que seu amor preparou.
-          </p>
-        </div>
-
-        {/* Open Button */}
-        <Button
-          onClick={handleOpenEnvelope}
-          className="bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white text-xl py-6 px-12 rounded-full shadow-2xl transform hover:scale-105 transition-all duration-300"
-        >
-          <Heart className="w-6 h-6 mr-3" />
-          Abrir Carta de Amor
-        </Button>
-
-        {/* Additional decorative elements */}
-        <div className="flex justify-center space-x-4 mt-8">
-          <div className="text-4xl animate-bounce" style={{ animationDelay: '0s' }}>🌹</div>
-          <div className="text-4xl animate-bounce" style={{ animationDelay: '0.5s' }}>💕</div>
-          <div className="text-4xl animate-bounce" style={{ animationDelay: '1s' }}>🌹</div>
+        {/* Click message */}
+        <div className="text-center mt-8">
+          <p className="text-white text-xl font-medium">Clique para abrir</p>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes floatUp {
+          0% {
+            transform: translateY(0) scale(0);
+            opacity: 0;
+          }
+          50% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(-100px) scale(1);
+            opacity: 0;
+          }
+        }
+
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 0.3;
+          }
+          50% {
+            opacity: 0.5;
+          }
+        }
+
+        .container:hover .card-wrapper {
+          transform: translateZ(50px) scale(1.1);
+        }
+
+        .container:hover .envelope-body {
+          box-shadow: 0 25px 50px -12px rgba(244, 63, 94, 0.5);
+        }
+
+        .container:hover .glow-effect {
+          opacity: 1;
+        }
+
+        .container:hover .floating-heart {
+          opacity: 1;
+        }
+
+        @media (max-width: 640px) {
+          .envelope-container {
+            width: 350px !important;
+            height: 250px !important;
+          }
+
+          .envelope-flap {
+            width: 350px !important;
+            height: 125px !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }
