@@ -61,15 +61,26 @@ export async function POST(request: NextRequest) {
       }), { status: 500 })
     }
 
-    // Get public URL
-    const { data: { publicUrl } } = supabaseServer.storage
+    // Get signed URL for secure access
+    const { data: signedUrlData, error: signedUrlError } = await supabaseServer.storage
       .from('memories-photos')
-      .getPublicUrl(fileName)
+      .createSignedUrl(fileName, 60 * 60 * 24) // 24 hours
 
-    console.log('Photo uploaded successfully. Public URL:', publicUrl)
+    if (signedUrlError) {
+      console.error('=== SIGNED URL ERROR ===')
+      console.error('Signed URL error for file:', fileName, 'Error:', signedUrlError)
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Erro ao gerar URL segura da foto',
+        code: 'SIGNED_URL_ERROR',
+        details: signedUrlError
+      }), { status: 500 })
+    }
+
+    console.log('Photo uploaded successfully. Signed URL:', signedUrlData.signedUrl)
 
     return createSuccessResponse({
-      url: publicUrl,
+      url: signedUrlData.signedUrl,
       fileName: fileName,
       caption: caption
     }, 'Foto enviada com sucesso')
