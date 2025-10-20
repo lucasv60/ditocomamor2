@@ -2,13 +2,18 @@ import { NextRequest } from "next/server"
 import { handleApiError, createSuccessResponse, PaymentError } from '@/lib/error-handler'
 import { validateAndSanitize, paymentSchema } from '@/lib/validation'
 import { supabaseServer } from '@/lib/supabase'
+import Stripe from 'stripe'
 
 // Verify we're using the correct client
 console.log('=== SUPABASE CLIENT VERIFICATION ===')
 console.log('Using supabaseServer client for database operations')
 console.log('Client type check:', typeof supabaseServer)
 console.log('Client has from method:', typeof supabaseServer.from)
-import { MercadoPagoConfig, Preference } from 'mercadopago'
+
+// Initialize Stripe
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-09-30.clover',
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -135,9 +140,9 @@ export async function POST(request: NextRequest) {
     console.log('customerEmail:', customerEmail)
     console.log('customerName:', customerName)
 
-    // Create memory record in Supabase
-    console.log('=== CREATING MEMORY RECORD ===')
-    const dataToInsert = {
+    // Create memory record in Supabase with UPSERT
+    console.log('=== CREATING MEMORY RECORD WITH UPSERT ===')
+    const dataToUpsert = {
       slug: generatedSlug,
       title: pageTitle,
       love_letter_content: loveText,
@@ -146,19 +151,19 @@ export async function POST(request: NextRequest) {
       youtube_music_url: youtubeUrl || null,
       payment_status: skipPayment ? 'paid' : 'pending'
     }
-    console.log('EXACT DATA TO INSERT:', JSON.stringify(dataToInsert, null, 2))
+    console.log('EXACT DATA TO UPSERT:', JSON.stringify(dataToUpsert, null, 2))
 
     let memoryData: any = null
     try {
       const { data, error: memoryError } = await supabaseServer
         .from('memories')
-        .insert(dataToInsert)
+        .upsert(dataToUpsert, { onConflict: 'slug' })
         .select()
         .single()
 
       if (memoryError) {
-        console.error('=== DATABASE INSERT ERROR ===')
-        console.error('Memory insert failed with error:', memoryError)
+        console.error('=== DATABASE UPSERT ERROR ===')
+        console.error('Memory upsert failed with error:', memoryError)
         console.error('Error code:', memoryError.code)
         console.error('Error message:', memoryError.message)
         console.error('Error details:', memoryError.details)
@@ -172,107 +177,80 @@ export async function POST(request: NextRequest) {
       }
 
       memoryData = data
-      console.log('=== MEMORY RECORD CREATED SUCCESSFULLY ===')
-      console.log('Created memory:', memoryData)
-    } catch (insertError) {
-      console.error('=== UNEXPECTED INSERT ERROR ===')
-      console.error('Unexpected error during insert:', insertError)
+      console.log('=== MEMORY RECORD CREATED/UPDATED SUCCESSFULLY ===')
+      console.log('Memory data:', memoryData)
+    } catch (upsertError) {
+      console.error('=== UNEXPECTED UPSERT ERROR ===')
+      console.error('Unexpected error during upsert:', upsertError)
       return new Response(JSON.stringify({
         success: false,
-        error: 'Erro interno durante inserção no banco de dados',
+        error: 'Erro interno durante upsert no banco de dados',
         code: 'INTERNAL_ERROR',
-        details: insertError instanceof Error ? insertError.message : String(insertError)
+        details: upsertError instanceof Error ? upsertError.message : String(upsertError)
       }), { status: 500 })
     }
 
-    // This code block is now inside the try-catch above
-
-    // Skip Mercado Pago if skipPayment flag is set
+    // Skip Stripe if skipPayment flag is set
     if (skipPayment) {
-      console.log('=== SKIPPING MERCADO PAGO - RETURNING SUCCESS ===')
+      console.log('=== SKIPPING STRIPE - RETURNING SUCCESS ===')
       return createSuccessResponse({
         slug: memoryData.slug,
       }, 'Página criada com sucesso')
     }
 
-    // Mercado Pago API configuration (only if not skipping payment)
-    let client: any = null
-    if (!skipPayment) {
-      const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN
+    // Create Stripe PaymentIntent
+    console.log('=== CREATING STRIPE PAYMENT INTENT ===')
+    try {
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: 1000, // R$ 10,00 in cents
+        currency: 'brl',
+        metadata: {
+          memory_slug: generatedSlug,
+          memory_id: memoryData.id,
+          customer_email: customerEmail,
+          customer_name: customerName,
+        },
+        description: `Página de Amor: ${pageTitle}`,
+        receipt_email: customerEmail,
+      })
 
-      if (!MERCADO_PAGO_ACCESS_TOKEN) {
-        throw new PaymentError('Mercado Pago não configurado')
+      console.log('=== PAYMENT INTENT CREATED ===')
+      console.log('Payment Intent ID:', paymentIntent.id)
+      console.log('Client Secret:', paymentIntent.client_secret)
+
+      // Update memory with Stripe payment intent data
+      console.log('=== UPDATING MEMORY WITH STRIPE DATA ===')
+      const { error: updateError } = await supabaseServer
+        .from('memories')
+        .update({
+          stripe_payment_intent_id: paymentIntent.id,
+          stripe_client_secret: paymentIntent.client_secret,
+        })
+        .eq('id', memoryData.id)
+
+      if (updateError) {
+        console.error('=== UPDATE ERROR ===')
+        console.error('Failed to update memory with Stripe data:', updateError)
+        // Don't throw here as payment intent was created successfully
+      } else {
+        console.log('=== MEMORY UPDATED WITH STRIPE DATA ===')
       }
 
-      // Configure Mercado Pago
-      client = new MercadoPagoConfig({
-        accessToken: MERCADO_PAGO_ACCESS_TOKEN
-      })
+      return createSuccessResponse({
+        stripe_client_secret: paymentIntent.client_secret,
+        slug: generatedSlug,
+      }, 'PaymentIntent criado com sucesso')
+
+    } catch (stripeError) {
+      console.error('=== STRIPE ERROR ===')
+      console.error('Stripe error:', stripeError)
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Erro ao criar PaymentIntent',
+        code: 'STRIPE_ERROR',
+        details: stripeError instanceof Error ? stripeError.message : String(stripeError)
+      }), { status: 500 })
     }
-
-    // Create payment preference with IPN notification URL (only if client is configured)
-    const preferenceData = {
-      items: [
-        {
-          id: `memory-${memoryData.id}`,
-          title: `Página de Amor: ${pageDataObject.pageTitle}`,
-          description: "Página de amor personalizada com fotos e mensagens",
-          quantity: 1,
-          unit_price: 1.0,
-          currency_id: "BRL",
-        },
-      ],
-      payer: {
-        email: customerEmail,
-        name: customerName,
-      },
-      back_urls: {
-        success: `${process.env.NEXT_PUBLIC_BASE_URL}/pagamento/sucesso`,
-        failure: `${process.env.NEXT_PUBLIC_BASE_URL}/pagamento/falha`,
-        pending: `${process.env.NEXT_PUBLIC_BASE_URL}/pagamento/pendente`,
-      },
-      auto_return: "approved",
-      notification_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/mercadopago-ipn`,
-      external_reference: memoryData.id,
-      metadata: {
-        memory_id: memoryData.id,
-        slug: pageDataObject.pageName,
-      },
-    }
-
-    const preference = new Preference(client)
-    const preferenceResponse = await preference.create({ body: preferenceData })
-
-    if (!preferenceResponse) {
-      throw new PaymentError('Erro ao criar preferência de pagamento')
-    }
-
-    console.log('=== PREFERENCE RESPONSE ===')
-    console.log('Response:', preferenceResponse)
-
-    // Update memory with preference_id
-    console.log('=== UPDATING MEMORY WITH PREFERENCE ID ===')
-    console.log('Updating memory ID:', memoryData.id, 'with preference_id:', preferenceResponse.id)
-
-    const { error: updateError } = await supabaseServer
-      .from('memories')
-      .update({ preference_id: preferenceResponse.id })
-      .eq('id', memoryData.id)
-
-    if (updateError) {
-      console.error('=== UPDATE ERROR ===')
-      console.error('Failed to update memory with preference_id:', updateError)
-      console.error('Error code:', updateError.code)
-      console.error('Error message:', updateError.message)
-      // Don't throw here as payment preference was created successfully
-    } else {
-      console.log('=== MEMORY UPDATED SUCCESSFULLY ===')
-    }
-
-    return createSuccessResponse({
-      init_point: preferenceResponse.init_point,
-      preference_id: preferenceResponse.id,
-    }, 'Preferência de pagamento criada com sucesso')
   } catch (error) {
     return handleApiError(error)
   }
