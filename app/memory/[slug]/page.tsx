@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { supabaseServer } from '@/lib/supabase'
 import { Memory } from '@/lib/types'
 import { RomanticPreview } from '@/components/builder/romantic-preview'
+import { EnvelopeWrapper } from '@/components/envelope-wrapper'
 
 // Helper function to get signed URLs for photos
 async function getSignedUrls(photoUrls: string[]) {
@@ -102,7 +103,9 @@ export default async function MemoryPage({ params }: PageProps) {
   // Get signed URLs for photos if they exist
   let signedPhotoUrls = memory.photos_urls || []
   if (memory.photos_urls && memory.photos_urls.length > 0) {
+    console.log('Getting signed URLs for photos:', memory.photos_urls)
     signedPhotoUrls = await getSignedUrls(memory.photos_urls)
+    console.log('Signed URLs result:', signedPhotoUrls)
   }
 
   // Transform data to match the expected format for RomanticPreview
@@ -119,10 +122,14 @@ export default async function MemoryPage({ params }: PageProps) {
     }))
   }
 
+  console.log('Final pageData for RomanticPreview:', JSON.stringify(pageData, null, 2))
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
-      <RomanticPreview builderData={pageData} />
-    </div>
+    <EnvelopeWrapper>
+      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
+        <RomanticPreview builderData={pageData} />
+      </div>
+    </EnvelopeWrapper>
   )
 }
 
