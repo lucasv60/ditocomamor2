@@ -30,8 +30,8 @@ export default function BuilderPage() {
       const dataToSave = {
         ...data,
         photos: data.photos.map(photo => ({
-          // Save uploaded photos with their URLs, blob URLs are temporary
-          preview: photo.uploaded ? photo.preview : (photo.preview && photo.preview.startsWith && photo.preview.startsWith('blob:') ? null : photo.preview),
+          // Save all previews including blob URLs for preview functionality
+          preview: photo.preview,
           caption: photo.caption,
           public_id: photo.public_id,
           uploaded: photo.uploaded
