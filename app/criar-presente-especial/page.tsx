@@ -148,8 +148,8 @@ export default function BuilderPage() {
 
       toast.success('Memória salva com sucesso! Redirecionando para pagamento...')
 
-      // Redirect to payment page
-      router.push(`/payment/${slug}`)
+      // Redirect to checkout page
+      router.push(`/checkout`)
 
     } catch (error) {
       console.error('Unexpected error:', error)
