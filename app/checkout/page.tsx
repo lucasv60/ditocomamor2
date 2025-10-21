@@ -39,7 +39,6 @@ export default function CheckoutPage() {
     setLoading(true)
 
     try {
-      // TEMPORARY: Skip Mercado Pago and create memory directly with paid status
       const response = await fetch("/api/create-payment", {
         method: "POST",
         headers: {
@@ -49,7 +48,7 @@ export default function CheckoutPage() {
           pageData,
           customerEmail: email.trim(),
           customerName: name.trim(),
-          skipPayment: true, // Flag to skip Mercado Pago
+          skipPayment: false, // Enable Stripe payment
         }),
       })
 
@@ -57,25 +56,20 @@ export default function CheckoutPage() {
 
       if (!response.ok) {
         console.error("API Error:", data)
-        toast.error(data.error || "Erro ao criar página. Tente novamente.")
+        toast.error(data.error || "Erro ao processar pagamento. Tente novamente.")
         return
       }
 
-      if (data.data && data.data.slug) {
-        toast.success("Página criada com sucesso!")
-
-        // Clear session storage after successful creation
-        sessionStorage.removeItem("pendingLovePage")
-
-        // Redirect directly to success page with slug
-        router.push(`/pagamento/sucesso?slug=${data.data.slug}`)
+      if (data.data && data.data.stripe_client_secret) {
+        // Redirect to Stripe payment page with client secret
+        router.push(`/pagamento/stripe?client_secret=${data.data.stripe_client_secret}&slug=${data.data.slug}`)
       } else {
-        console.error("No slug in response:", data)
-        toast.error("Erro ao criar página. Tente novamente.")
+        console.error("No client secret in response:", data)
+        toast.error("Erro ao iniciar pagamento. Tente novamente.")
       }
     } catch (error) {
-      console.error("Erro ao processar criação:", error)
-      toast.error("Erro ao processar criação. Verifique sua conexão e tente novamente.")
+      console.error("Erro ao processar pagamento:", error)
+      toast.error("Erro ao processar pagamento. Verifique sua conexão e tente novamente.")
     } finally {
       setLoading(false)
     }
@@ -193,18 +187,18 @@ export default function CheckoutPage() {
                 />
               </div>
 
-              <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-4 mt-6">
-                <p className="text-sm text-green-300">
-                  Sua página será criada imediatamente após confirmar os dados.
+              <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4 mt-6">
+                <p className="text-sm text-blue-300">
+                  Você será redirecionado para o pagamento seguro via Stripe.
                 </p>
               </div>
 
               <Button
                 onClick={handlePayment}
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-lg py-6 font-semibold mt-6"
+                className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white text-lg py-6 font-semibold mt-6"
               >
-                {loading ? "Criando página..." : "Criar Página de Amor"}
+                {loading ? "Processando..." : "Ir para Pagamento"}
               </Button>
 
             </div>
