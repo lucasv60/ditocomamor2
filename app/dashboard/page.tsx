@@ -1,22 +1,64 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Heart, LogOut, User } from "lucide-react"
+import { Heart, LogOut, User, Eye, Edit, Plus } from "lucide-react"
 import { useUser } from "@/lib/auth-context"
+import { supabase } from "@/lib/supabase"
 import { toast } from "sonner"
+
+interface Memory {
+  id: string
+  slug: string
+  title: string
+  payment_status: string
+  created_at: string
+}
 
 export default function DashboardPage() {
   const { user, loading, signOut } = useUser()
   const router = useRouter()
+  const [memories, setMemories] = useState<Memory[]>([])
+  const [memoriesLoading, setMemoriesLoading] = useState(true)
 
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login")
     }
   }, [user, loading, router])
+
+  useEffect(() => {
+    const fetchMemories = async () => {
+      if (!user) return
+
+      try {
+        const { data, error } = await supabase
+          .from('memories')
+          .select('id, slug, title, payment_status, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.error('Error fetching memories:', error)
+          toast.error('Erro ao carregar memórias')
+          return
+        }
+
+        setMemories(data || [])
+      } catch (error) {
+        console.error('Unexpected error:', error)
+        toast.error('Erro inesperado ao carregar memórias')
+      } finally {
+        setMemoriesLoading(false)
+      }
+    }
+
+    if (user) {
+      fetchMemories()
+    }
+  }, [user])
 
   const handleSignOut = async () => {
     try {
@@ -128,16 +170,8 @@ export default function DashboardPage() {
                   className="w-full bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white"
                   onClick={() => router.push("/criar-presente-especial")}
                 >
-                  <Heart className="w-4 h-4 mr-2" />
+                  <Plus className="w-4 h-4 mr-2" />
                   Criar Nova Memória
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="w-full border-rose-500/30 text-rose-400 hover:bg-rose-500/10"
-                  onClick={() => toast.info("Funcionalidade em desenvolvimento")}
-                >
-                  Ver Minhas Memórias
                 </Button>
 
                 <Button
@@ -149,6 +183,82 @@ export default function DashboardPage() {
                 </Button>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Memories List Section */}
+          <div className="mt-12">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-pink-400 via-rose-400 to-pink-500 bg-clip-text text-transparent mb-8 text-center">
+              Suas Memórias Criadas
+            </h2>
+
+            {memoriesLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
+                <p className="text-rose-400 text-xl">Carregando suas memórias...</p>
+              </div>
+            ) : memories.length === 0 ? (
+              <Card className="bg-gray-900/80 backdrop-blur-sm border-rose-500/20 max-w-2xl mx-auto">
+                <CardContent className="text-center py-12">
+                  <Heart className="w-16 h-16 text-rose-400 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-xl font-semibold text-white mb-2">Você ainda não tem memórias</h3>
+                  <p className="text-gray-400 mb-6">
+                    Que tal criar a primeira memória especial para alguém que você ama?
+                  </p>
+                  <Button
+                    onClick={() => router.push("/criar-presente-especial")}
+                    className="bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Criar Minha Primeira Memória
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {memories.map((memory) => (
+                  <Card key={memory.id} className="bg-gray-900/80 backdrop-blur-sm border-rose-500/20 hover:border-rose-400/40 transition-colors">
+                    <CardHeader>
+                      <CardTitle className="text-white text-lg line-clamp-2">{memory.title}</CardTitle>
+                      <CardDescription className="text-gray-400">
+                        Criada em {new Date(memory.created_at).toLocaleDateString('pt-BR')}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          memory.payment_status === 'paid' ? 'bg-green-500' : 'bg-yellow-500'
+                        }`} />
+                        <span className="text-sm text-gray-400">
+                          {memory.payment_status === 'paid' ? 'Publicado' : 'Aguardando pagamento'}
+                        </span>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 border-rose-500/30 text-rose-400 hover:bg-rose-500/10"
+                          onClick={() => router.push(`/memory/${memory.slug}`)}
+                          disabled={memory.payment_status !== 'paid'}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          Ver
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 border-rose-500/30 text-rose-400 hover:bg-rose-500/10"
+                          onClick={() => toast.info("Edição em desenvolvimento")}
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Editar
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </main>
