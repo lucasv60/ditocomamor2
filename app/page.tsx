@@ -7,31 +7,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Check, Heart, Globe } from "lucide-react"
 import Image from "next/image"
 import { LetterCard } from "@/components/letter-card"
-import { useUser } from "@/lib/auth-context"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
 
 export default function HomePage() {
-  const { user, loading } = useUser()
-  const router = useRouter()
-
-  useEffect(() => {
-    if (!loading && user) {
-      router.push("/dashboard")
-    }
-  }, [user, loading, router])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto"></div>
-          <p className="text-rose-400 text-xl">Carregando...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-black text-white">
 
