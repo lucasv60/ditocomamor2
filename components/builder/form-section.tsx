@@ -15,9 +15,10 @@ import { toast } from "sonner"
 type Props = {
   builderData: BuilderData
   setBuilderData: (data: BuilderData) => void
+  onSave?: () => void
 }
 
-export function FormSection({ builderData, setBuilderData }: Props) {
+export function FormSection({ builderData, setBuilderData, onSave }: Props) {
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -181,30 +182,10 @@ export function FormSection({ builderData, setBuilderData }: Props) {
       }
     }
 
-    const pageData = {
-      ...builderData,
-      pageName: builderData.pageName.trim(),
-      pageTitle: builderData.pageTitle.trim(),
-      loveText: builderData.loveText.trim(),
-      youtubeUrl: builderData.youtubeUrl.trim(),
-      photos: builderData.photos.map((photo) => ({
-        preview: photo.preview,
-        caption: photo.caption.trim(),
-        public_id: (photo as any).public_id,
-        uploaded: (photo as any).uploaded,
-      })),
+    // Call the save function from parent component
+    if (onSave) {
+      onSave()
     }
-
-    // Salvar dados no sessionStorage para o checkout
-    sessionStorage.setItem("pendingLovePage", JSON.stringify(pageData))
-
-    toast.success("Redirecionando para checkout...")
-
-    // Pequeno delay para mostrar o toast
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // Redirect para checkout
-    router.push("/checkout")
   }
 
   return (
