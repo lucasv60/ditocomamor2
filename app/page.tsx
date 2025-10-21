@@ -23,8 +23,8 @@ export default function HomePage() {
             <button className="text-gray-400 hover:text-white transition-colors">
               <Globe className="w-5 h-5" />
             </button>
-            <Link href="/criar-presente-especial" className="text-gray-400 hover:text-white transition-colors text-sm">
-              Galeria de Memórias
+            <Link href="/login" className="text-gray-400 hover:text-white transition-colors text-sm">
+              Entrar
             </Link>
           </nav>
         </div>
