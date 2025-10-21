@@ -184,7 +184,7 @@ export function FormSection({ builderData, setBuilderData, onSave }: Props) {
 
     // Call the save function from parent component
     if (onSave) {
-      onSave()
+      await onSave()
     }
   }
 
