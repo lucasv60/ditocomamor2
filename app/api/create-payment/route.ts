@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
     console.log('=== CREATING STRIPE PAYMENT INTENT ===')
     try {
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: 1000, // R$ 10,00 in cents
+        amount: 100, // R$ 1,00 in cents
         currency: 'brl',
         metadata: {
           memory_slug: generatedSlug,

@@ -115,7 +115,7 @@ export function CheckoutForm({ slug }: CheckoutFormProps) {
             ) : (
               <div className="flex items-center gap-2">
                 <CreditCard className="w-5 h-5" />
-                Pagar R$ 10,00
+                Pagar R$ 1,00
               </div>
             )}
           </span>

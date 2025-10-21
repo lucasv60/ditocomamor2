@@ -136,11 +136,11 @@ export default function CheckoutPage() {
               <div className="border-t border-rose-500/20 pt-4">
                 <div className="flex justify-between items-center text-lg">
                   <span className="text-gray-400">Subtotal:</span>
-                  <span className="text-white font-semibold">R$ 10,00</span>
+                  <span className="text-white font-semibold">R$ 1,00</span>
                 </div>
                 <div className="flex justify-between items-center text-2xl font-bold mt-2">
                   <span className="text-rose-400">Total:</span>
-                  <span className="text-rose-400">R$ 10,00</span>
+                  <span className="text-rose-400">R$ 1,00</span>
                 </div>
               </div>
             </div>

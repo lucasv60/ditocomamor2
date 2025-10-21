@@ -396,7 +396,7 @@ export default function HomePage() {
                   </Link>
                 </Button>
                 <div className="text-sm text-gray-500">
-                  A partir de <span className="text-pink-400 font-semibold">R$ 10,00</span>
+                  A partir de <span className="text-pink-400 font-semibold">R$ 1,00</span>
                 </div>
               </div>
             </div>
