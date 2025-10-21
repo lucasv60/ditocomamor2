@@ -9,12 +9,6 @@ import { LetterCard } from "@/components/letter-card"
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Promotional Banner */}
-      <div className="bg-gradient-to-r from-pink-600 via-rose-500 to-pink-600 py-3 text-center">
-        <p className="text-sm md:text-base font-medium">
-          Dia Internacional da Namorada! Todos os planos com 50% de desconto!
-        </p>
-      </div>
 
       {/* Header */}
       <header className="border-b border-white/10">
@@ -40,8 +34,8 @@ export default function HomePage() {
       <section className="container mx-auto px-4 py-16 md:py-24 overflow-hidden">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Content */}
-          <div className="space-y-6 max-w-2xl">
-            <h1 className="text-4xl md:text-6xl font-bold leading-tight">
+          <div className="space-y-6 max-w-2xl text-center lg:text-left lg:ml-8 xl:ml-16">
+            <h1 className="text-3xl md:text-5xl font-bold leading-tight">
               Não dê um presente tradicional.
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-rose-500">
@@ -77,30 +71,6 @@ export default function HomePage() {
           {/* Right Content - Mockups */}
           <div className="relative min-h-[400px] lg:min-h-[500px]">
             <div className="flex flex-col items-center gap-8 lg:gap-12">
-              {/* Desktop Mockup - Only on large screens */}
-              <div className="hidden lg:block w-[400px]">
-                <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-2 shadow-2xl border border-gray-700">
-                  <div className="bg-black rounded-xl overflow-hidden">
-                    <div className="bg-gray-900 px-4 py-2 flex items-center gap-2 border-b border-gray-800">
-                      <div className="flex gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-red-500" />
-                        <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                        <div className="w-3 h-3 rounded-full bg-green-500" />
-                      </div>
-                    </div>
-                    <div className="p-6 bg-gradient-to-br from-gray-900 to-black">
-                      <Image
-                        src="/romantic-couple.png"
-                        alt="Couple photo"
-                        width={400}
-                        height={300}
-                        className="w-full rounded-lg"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* Mobile Mockup */}
               <div className="relative w-[280px]">
                 <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-[3rem] p-3 shadow-2xl border border-gray-700">
@@ -353,25 +323,6 @@ export default function HomePage() {
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 md:py-32">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center space-y-8">
-            <h2 className="text-4xl md:text-5xl font-bold text-balance">Pronto para criar uma memória inesquecível?</h2>
-            <p className="text-xl text-gray-400 text-pretty">
-              Comece agora e surpreenda quem você ama com um presente único e emocionante.
-            </p>
-            <Button
-              asChild
-              size="lg"
-              className="bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white text-lg px-8 py-6 rounded-xl shadow-lg shadow-pink-500/50"
-            >
-              <Link href="/criar-presente-especial">Criar Meu Presente</Link>
-            </Button>
           </div>
         </div>
       </section>
