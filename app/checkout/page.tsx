@@ -30,20 +30,17 @@ export default function CheckoutPage() {
       setIsLoadingMemory(true)
 
       try {
-        const { data, error } = await supabase
-          .from('memories')
-          .select('*')
-          .eq('id', memoryId)
-          .single()
+        const response = await fetch(`/api/get-memory?id=${memoryId}`)
+        const result = await response.json()
 
-        if (error) {
-          console.error('Erro ao buscar memória:', error)
+        if (!response.ok) {
+          console.error('Erro ao buscar memória:', result.error)
           toast.error('Erro ao carregar dados da memória')
           return
         }
 
-        if (data) {
-          setPageData(data)
+        if (result.data) {
+          setPageData(result.data)
         }
       } catch (error) {
         console.error('Erro de busca no Checkout:', error)
