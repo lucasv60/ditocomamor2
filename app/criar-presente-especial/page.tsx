@@ -111,11 +111,17 @@ export default function BuilderPage() {
 
       // Check if slug exists and make it unique
       while (true) {
-        const { data: existing } = await supabase
+        const { data: existing, error: checkError } = await supabase
           .from('memories')
           .select('id')
           .eq('slug', slug)
           .single()
+
+        if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "not found"
+          console.error('Error checking slug:', checkError)
+          toast.error('Erro ao verificar disponibilidade do nome da página')
+          return
+        }
 
         if (!existing) break
         slug = `${baseSlug}-${counter}`
