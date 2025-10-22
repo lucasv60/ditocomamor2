@@ -76,7 +76,7 @@ export default function CheckoutPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          pageData,
+          memoryId,
           customerEmail: email.trim(),
           customerName: name.trim(),
           skipPayment: false, // Enable Stripe payment

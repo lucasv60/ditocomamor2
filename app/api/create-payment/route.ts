@@ -27,168 +27,46 @@ export async function POST(request: NextRequest) {
     console.log('CORPO RECEBIDO:', JSON.stringify(body))
     console.log('Request body keys:', Object.keys(body))
 
-    // Extract fields from JSON with safe defaults
-    const { pageData, customerEmail, customerName, skipPayment } = body
-    const pageName = pageData?.pageName || ''
-    const pageTitle = pageData?.pageTitle || ''
-    const startDate = pageData?.startDate || null
-    const loveText = pageData?.loveText || ''
-    const youtubeUrl = pageData?.youtubeUrl || ''
-    const photos = pageData?.photos || []
+    // Extract fields from JSON
+    const { memoryId, customerEmail, customerName, skipPayment } = body
 
-    console.log('=== EXTRACTED FORM FIELDS ===')
-    console.log('pageName:', pageName)
-    console.log('pageTitle:', pageTitle)
-    console.log('startDate:', startDate)
-    console.log('loveText:', loveText?.substring(0, 50) + '...')
-    console.log('youtubeUrl:', youtubeUrl)
+    console.log('=== EXTRACTED PAYMENT FIELDS ===')
+    console.log('memoryId:', memoryId)
     console.log('customerEmail:', customerEmail)
     console.log('customerName:', customerName)
-
-    // Generate slug from title with uniqueness check
-    let baseSlug = pageName || (pageTitle ? pageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : '')
-    let generatedSlug = baseSlug
-    let counter = 1
-
-    // Check if slug exists and generate unique one
-    while (true) {
-      try {
-        const { data: existingMemory } = await supabaseServer
-          .from('memories')
-          .select('id')
-          .eq('slug', generatedSlug)
-          .single()
-
-        if (!existingMemory) {
-          // Slug is available
-          break
-        }
-
-        // Slug exists, increment counter
-        generatedSlug = `${baseSlug}-${counter}`
-        counter++
-      } catch (error) {
-        // If error (slug doesn't exist), it's available
-        break
-      }
-    }
-
-    console.log('SLUG GERADO:', generatedSlug)
+    console.log('skipPayment:', skipPayment)
 
     // Validate required fields
-    if (!generatedSlug || !pageTitle || !loveText) {
+    if (!memoryId) {
       console.error('=== VALIDATION FAILED ===')
-      console.error('Missing required fields')
+      console.error('Missing memoryId')
       return new Response(JSON.stringify({
         success: false,
-        error: 'Campos obrigatórios não preenchidos',
+        error: 'Campos obrigatórios não preenchidos: memoryId',
         code: 'VALIDATION_ERROR'
       }), { status: 400 })
     }
 
-    // Format date
-    let formattedDate = null
-    if (startDate) {
-      try {
-        const date = new Date(startDate)
-        formattedDate = date.toISOString().split('T')[0] // YYYY-MM-DD format
-        console.log('FORMATTED DATE:', formattedDate)
-      } catch (dateError) {
-        console.error('Date parsing error:', dateError)
-        formattedDate = null
-      }
-    }
+    // Fetch existing memory from Supabase
+    console.log('=== FETCHING EXISTING MEMORY ===')
+    const { data: memoryData, error: fetchError } = await supabaseServer
+      .from('memories')
+      .select('id, slug, title, payment_status')
+      .eq('id', memoryId)
+      .single()
 
-    // Process photos - now photos is an array of objects with uploaded URLs
-    console.log('PHOTOS COUNT:', photos?.length || 0)
-
-    // Extract photo URLs from the uploaded photos
-    const uploadedPhotoUrls: string[] = []
-    if (photos && photos.length > 0) {
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i]
-        console.log('Processing uploaded photo', i + 1, ':', photo)
-
-        // Photo should already be uploaded, just extract the URL
-        if (photo && photo.preview) {
-          uploadedPhotoUrls.push(photo.preview)
-          console.log('Added photo URL:', photo.preview)
-        } else {
-          console.log('Photo', i + 1, 'has no preview URL, skipping')
-        }
-      }
-    }
-    console.log('=== PHOTO PROCESSING COMPLETE ===')
-    console.log('Total processed photos:', uploadedPhotoUrls.length)
-
-    // Create pageDataObject from form fields
-    const pageDataObject = {
-      pageName: generatedSlug,
-      pageTitle,
-      startDate: formattedDate,
-      loveText,
-      youtubeUrl: youtubeUrl || '',
-      photos: (photos || []).map((photoObj: any, index: number) => ({
-        preview: photoObj.preview,
-        caption: photoObj.caption || `Foto ${index + 1}`,
-        public_id: photoObj.public_id || ''
-      }))
-    }
-
-    console.log('=== PAGEDATA CREATED ===')
-    console.log('pageDataObject:', JSON.stringify(pageDataObject, null, 2))
-    console.log('customerEmail:', customerEmail)
-    console.log('customerName:', customerName)
-
-    // Create memory record in Supabase with UPSERT
-    console.log('=== CREATING MEMORY RECORD WITH UPSERT ===')
-    const dataToUpsert = {
-      slug: generatedSlug,
-      title: pageTitle,
-      love_letter_content: loveText,
-      relationship_start_date: formattedDate,
-      photos_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
-      youtube_music_url: youtubeUrl || null,
-      payment_status: skipPayment ? 'paid' : 'pending'
-    }
-    console.log('EXACT DATA TO UPSERT:', JSON.stringify(dataToUpsert, null, 2))
-
-    let memoryData: any = null
-    try {
-      const { data, error: memoryError } = await supabaseServer
-        .from('memories')
-        .upsert(dataToUpsert, { onConflict: 'slug' })
-        .select()
-        .single()
-
-      if (memoryError) {
-        console.error('=== DATABASE UPSERT ERROR ===')
-        console.error('Memory upsert failed with error:', memoryError)
-        console.error('Error code:', memoryError.code)
-        console.error('Error message:', memoryError.message)
-        console.error('Error details:', memoryError.details)
-        console.error('Error hint:', memoryError.hint)
-        return new Response(JSON.stringify({
-          success: false,
-          error: `Erro ao salvar dados da memória: ${memoryError.message}`,
-          code: 'DATABASE_ERROR',
-          details: memoryError
-        }), { status: 500 })
-      }
-
-      memoryData = data
-      console.log('=== MEMORY RECORD CREATED/UPDATED SUCCESSFULLY ===')
-      console.log('Memory data:', memoryData)
-    } catch (upsertError) {
-      console.error('=== UNEXPECTED UPSERT ERROR ===')
-      console.error('Unexpected error during upsert:', upsertError)
+    if (fetchError || !memoryData) {
+      console.error('=== MEMORY FETCH ERROR ===')
+      console.error('Memory fetch failed:', fetchError)
       return new Response(JSON.stringify({
         success: false,
-        error: 'Erro interno durante upsert no banco de dados',
-        code: 'INTERNAL_ERROR',
-        details: upsertError instanceof Error ? upsertError.message : String(upsertError)
-      }), { status: 500 })
+        error: 'Memória não encontrada',
+        code: 'NOT_FOUND'
+      }), { status: 404 })
     }
+
+    console.log('=== MEMORY FOUND ===')
+    console.log('Memory data:', memoryData)
 
     // Skip Stripe if skipPayment flag is set
     if (skipPayment) {
@@ -205,12 +83,12 @@ export async function POST(request: NextRequest) {
         amount: 100, // R$ 1,00 in cents
         currency: 'brl',
         metadata: {
-          memory_slug: generatedSlug,
+          memory_slug: memoryData.slug,
           memory_id: memoryData.id,
           customer_email: customerEmail,
           customer_name: customerName,
         },
-        description: `Página de Amor: ${pageTitle}`,
+        description: `Página de Amor: ${memoryData.title}`,
         receipt_email: customerEmail,
       })
 
@@ -238,7 +116,7 @@ export async function POST(request: NextRequest) {
 
       return createSuccessResponse({
         stripe_client_secret: paymentIntent.client_secret,
-        slug: generatedSlug,
+        slug: memoryData.slug,
       }, 'PaymentIntent criado com sucesso')
 
     } catch (stripeError) {
