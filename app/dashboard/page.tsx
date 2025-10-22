@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Heart, LogOut, User, Eye, Edit, Plus } from "lucide-react"
@@ -234,6 +235,17 @@ export default function DashboardPage() {
                       </div>
 
                       <div className="flex gap-2">
+                        {memory.payment_status !== 'paid' && (
+                          <Link href={`/checkout?memoryId=${memory.id}`}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 border-rose-500/30 text-rose-400 hover:bg-rose-500/10"
+                            >
+                              Ir para o pagamento
+                            </Button>
+                          </Link>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
