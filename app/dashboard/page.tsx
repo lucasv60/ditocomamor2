@@ -92,12 +92,12 @@ export default function DashboardPage() {
       {/* Header */}
       <header className="border-b border-white/10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center">
               <Heart className="w-6 h-6 text-white fill-white" />
             </div>
             <span className="text-2xl font-bold">Dito com Amor</span>
-          </div>
+          </Link>
           <Button
             onClick={handleSignOut}
             variant="outline"

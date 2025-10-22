@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -56,9 +57,11 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center p-4">
       <Card className="w-full max-w-md bg-gray-900/80 backdrop-blur-sm border-rose-500/20">
         <CardHeader className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Heart className="w-8 h-8 text-white fill-white" />
-          </div>
+          <Link href="/" className="inline-block">
+            <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-rose-600 rounded-full flex items-center justify-center mx-auto mb-4 cursor-pointer hover:scale-105 transition-transform">
+              <Heart className="w-8 h-8 text-white fill-white" />
+            </div>
+          </Link>
           <CardTitle className="text-2xl font-bold text-white">Entrar no Dito com Amor</CardTitle>
           <CardDescription className="text-gray-400">
             Digite seu email para receber um link mágico de acesso
