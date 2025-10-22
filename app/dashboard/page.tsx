@@ -215,9 +215,9 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {memories.map((memory) => (
-                  <Card key={memory.id} className="bg-gray-900/80 backdrop-blur-sm border-rose-500/20 hover:border-rose-400/40 transition-colors">
+                  <Card key={memory.id} className="bg-gray-900/80 backdrop-blur-sm border-rose-500/20 hover:border-rose-400/40 transition-colors min-w-0">
                     <CardHeader>
                       <CardTitle className="text-white text-lg line-clamp-2">{memory.title}</CardTitle>
                       <CardDescription className="text-gray-400">
@@ -234,13 +234,13 @@ export default function DashboardPage() {
                         </span>
                       </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         {memory.payment_status !== 'paid' && (
-                          <Link href={`/checkout?memoryId=${memory.id}`}>
+                          <Link href={`/checkout?memoryId=${memory.id}`} className="flex-1 min-w-0">
                             <Button
                               size="sm"
                               variant="outline"
-                              className="flex-1 border-rose-500/30 text-rose-400 hover:bg-rose-500/10"
+                              className="w-full border-rose-500/30 text-rose-400 hover:bg-rose-500/10 text-xs"
                             >
                               Ir para o pagamento
                             </Button>
