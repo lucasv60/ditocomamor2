@@ -115,15 +115,15 @@ export default function BuilderPage() {
           .from('memories')
           .select('id')
           .eq('slug', slug)
-          .single()
+          .limit(1)
 
-        if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "not found"
+        if (checkError) {
           console.error('Error checking slug:', checkError)
           toast.error('Erro ao verificar disponibilidade do nome da página')
           return
         }
 
-        if (!existing) break
+        if (!existing || existing.length === 0) break
         slug = `${baseSlug}-${counter}`
         counter++
       }
