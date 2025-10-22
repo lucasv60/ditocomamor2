@@ -103,10 +103,37 @@ export default function CheckoutPage() {
     }
   }
 
-  if (isLoadingMemory || !pageData) {
+  if (isLoadingMemory) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
-        <div className="text-rose-400">Carregando...</div>
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto"></div>
+          <p className="text-rose-400 text-xl">Carregando dados da memória...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!memoryId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Heart className="w-16 h-16 text-rose-400 mx-auto opacity-50" />
+          <h2 className="text-2xl font-bold text-white">Memória não encontrada</h2>
+          <p className="text-gray-400">O ID da memória não foi fornecido.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!pageData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Heart className="w-16 h-16 text-rose-400 mx-auto opacity-50" />
+          <h2 className="text-2xl font-bold text-white">Memória não encontrada</h2>
+          <p className="text-gray-400">Não foi possível carregar os dados da memória.</p>
+        </div>
       </div>
     )
   }

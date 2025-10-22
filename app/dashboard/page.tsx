@@ -234,13 +234,13 @@ export default function DashboardPage() {
                         </span>
                       </div>
 
-                      <div className="flex gap-2 flex-wrap">
+                      <div className="flex gap-2">
                         {memory.payment_status !== 'paid' && (
-                          <Link href={`/checkout?memoryId=${memory.id}`} className="flex-1 min-w-0">
+                          <Link href={`/checkout?memoryId=${memory.id}`} className="flex-grow min-w-0">
                             <Button
                               size="sm"
                               variant="outline"
-                              className="w-full border-rose-500/30 text-rose-400 hover:bg-rose-500/10 text-xs"
+                              className="w-full border-rose-500/30 text-rose-400 hover:bg-rose-500/10 text-xs whitespace-nowrap"
                             >
                               Ir para o pagamento
                             </Button>
@@ -249,7 +249,7 @@ export default function DashboardPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="flex-1 border-rose-500/30 text-rose-400 hover:bg-rose-500/10"
+                          className="w-14 border-rose-500/30 text-rose-400 hover:bg-rose-500/10 flex-shrink-0"
                           onClick={() => router.push(`/memory/${memory.slug}`)}
                           disabled={memory.payment_status !== 'paid'}
                         >
@@ -259,7 +259,7 @@ export default function DashboardPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="flex-1 border-rose-500/30 text-rose-400 hover:bg-rose-500/10"
+                          className="w-14 border-rose-500/30 text-rose-400 hover:bg-rose-500/10 flex-shrink-0"
                           onClick={() => toast.info("Edição em desenvolvimento")}
                         >
                           <Edit className="w-4 h-4 mr-1" />
