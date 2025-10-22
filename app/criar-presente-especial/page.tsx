@@ -140,6 +140,8 @@ export default function BuilderPage() {
         payment_status: 'pending'
       }
 
+      console.log('Payload de Inserção:', memoryData)
+
       const { data, error } = await supabase
         .from('memories')
         .insert(memoryData)
@@ -147,7 +149,7 @@ export default function BuilderPage() {
         .single()
 
       if (error) {
-        console.error('Error saving memory:', error)
+        console.error('Erro de Inserção Completo:', JSON.stringify(error, null, 2))
         toast.error('Erro ao salvar memória. Tente novamente.')
         return
       }
