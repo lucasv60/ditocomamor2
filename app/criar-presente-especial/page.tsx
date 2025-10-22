@@ -29,26 +29,11 @@ export default function BuilderPage() {
     youtubeUrl: "",
   })
 
+  const [isClient, setIsClient] = useState(false)
+
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/login")
-    }
-  }, [user, authLoading, router])
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto"></div>
-          <p className="text-rose-400 text-xl">Carregando...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return null // Will redirect in useEffect
-  }
+    setIsClient(true)
+  }, [])
 
   // Auto-save to localStorage
   const saveToLocalStorage = (data: BuilderData) => {
@@ -97,12 +82,18 @@ export default function BuilderPage() {
     saveToLocalStorage(data)
   }
 
-  const handleSaveMemory = async () => {
-    if (!user) {
-      toast.error("Você precisa estar logado para salvar")
-      return
-    }
+  if (authLoading || !isClient) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto"></div>
+          <p className="text-rose-400 text-xl">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
 
+  const handleSaveMemory = async () => {
     try {
       // Generate unique slug
       const baseSlug = builderData.pageName.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "")
@@ -130,7 +121,7 @@ export default function BuilderPage() {
 
       // Prepare data for insertion
       const memoryData = {
-        user_id: user.id,
+        user_id: user?.id || null,
         slug,
         title: builderData.pageTitle,
         relationship_start_date: builderData.startDate?.toISOString(),
@@ -142,10 +133,12 @@ export default function BuilderPage() {
 
       console.log('Payload de Inserção:', memoryData)
 
+      await supabase.auth.getSession();
+
       const { data, error } = await supabase
         .from('memories')
         .insert(memoryData)
-        .select()
+        .select('id, slug')
         .single()
 
       if (error) {
@@ -154,10 +147,26 @@ export default function BuilderPage() {
         return
       }
 
+      console.log('Inserção bem-sucedida, redirecionando para checkout...', data)
+
       toast.success('Memória salva com sucesso! Redirecionando para pagamento...')
 
-      // Redirect to checkout page
-      router.push(`/checkout`)
+      // Clear form state to prevent re-rendering issues
+      setBuilderData({
+        pageName: "",
+        pageTitle: "",
+        startDate: null,
+        photos: [],
+        loveText: "",
+        youtubeUrl: "",
+      })
+
+      // Clear localStorage draft
+      localStorage.removeItem('love-page-draft')
+
+      // Redirect to checkout page with memory ID
+      router.replace(`/checkout?memoryId=${data.id}`)
+      return
 
     } catch (error) {
       console.error('Unexpected error:', error)

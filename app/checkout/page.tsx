@@ -1,29 +1,60 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Heart, ShoppingCart, CreditCard, Check } from "lucide-react"
 import { toast } from "sonner"
+import { supabase } from "@/lib/supabase"
 
 export default function CheckoutPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const memoryId = searchParams.get('memoryId')
   const [pageData, setPageData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [isLoadingMemory, setIsLoadingMemory] = useState(true)
   const [email, setEmail] = useState("")
   const [name, setName] = useState("")
 
   useEffect(() => {
-    const data = sessionStorage.getItem("pendingLovePage")
-    if (!data) {
-      router.push("/criar-presente-especial")
-      return
+    const fetchMemoryData = async () => {
+      if (!memoryId) {
+        setIsLoadingMemory(false)
+        return
+      }
+
+      setIsLoadingMemory(true)
+
+      try {
+        const { data, error } = await supabase
+          .from('memories')
+          .select('*')
+          .eq('id', memoryId)
+          .single()
+
+        if (error) {
+          console.error('Erro ao buscar memória:', error)
+          toast.error('Erro ao carregar dados da memória')
+          return
+        }
+
+        if (data) {
+          setPageData(data)
+        }
+      } catch (error) {
+        console.error('Erro de busca no Checkout:', error)
+        toast.error('Erro ao carregar dados da memória')
+      } finally {
+        setIsLoadingMemory(false)
+      }
     }
-    setPageData(JSON.parse(data))
-  }, [router])
+
+    fetchMemoryData()
+  }, [memoryId])
 
   const handlePayment = async () => {
     if (!email.trim() || !name.trim()) {
@@ -75,7 +106,7 @@ export default function CheckoutPage() {
     }
   }
 
-  if (!pageData) {
+  if (isLoadingMemory || !pageData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
         <div className="text-rose-400">Carregando...</div>
@@ -109,11 +140,11 @@ export default function CheckoutPage() {
                   <ul className="text-sm text-gray-400 space-y-1">
                     <li className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-green-400" />
-                      Título: {pageData.pageTitle}
+                      Título: {pageData.title}
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-green-400" />
-                      {pageData.photos.length} fotos incluídas
+                      {pageData.photos_urls?.length || 0} fotos incluídas
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-green-400" />
@@ -123,7 +154,7 @@ export default function CheckoutPage() {
                       <Check className="w-4 h-4 text-green-400" />
                       Contador de tempo juntos
                     </li>
-                    {pageData.youtubeUrl && (
+                    {pageData.youtube_music_url && (
                       <li className="flex items-center gap-2">
                         <Check className="w-4 h-4 text-green-400" />
                         Música especial incluída

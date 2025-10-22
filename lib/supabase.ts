@@ -29,7 +29,11 @@ if (typeof window === 'undefined') {
 console.log('=== SUPABASE CLIENTS INITIALIZING ===')
 
 // Client for client-side operations (public) - Only uses public keys
-export const supabase = createClient(supabaseUrl!, supabaseAnonKey!)
+let supabase: any = null
+if (typeof window !== 'undefined') {
+  supabase = createClient(supabaseUrl!, supabaseAnonKey!)
+}
+export { supabase }
 
 // Client for server-side operations (admin) - Only available server-side
 export const supabaseAdmin = typeof window === 'undefined' ? createClient(supabaseUrl!, supabaseServiceRoleKey!, {
