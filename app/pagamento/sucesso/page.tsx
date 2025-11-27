@@ -65,6 +65,27 @@ export default function PaymentSuccessPage() {
           }
 
           memory = memoryData
+
+          // Ensure payment status is set to 'paid' since payment was approved
+          if (memory.payment_status !== 'paid') {
+            console.log("Updating payment status to 'paid' for memory:", memory.id)
+            const updateResponse = await fetch(`/api/memory/${preferenceId}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ payment_status: 'paid' }),
+            })
+
+            if (!updateResponse.ok) {
+              console.error("Failed to update payment status")
+              // Continue anyway, as the page might still work
+            } else {
+              console.log("Payment status updated successfully")
+              // Update local memory object
+              memory.payment_status = 'paid'
+            }
+          }
         } else {
           toast.error("Parâmetros de acesso inválidos.")
           router.push("/")
