@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest } from "next/server"
 import { handleApiError, createSuccessResponse } from '@/lib/error-handler'
 import { supabaseServer } from '@/lib/supabase'
