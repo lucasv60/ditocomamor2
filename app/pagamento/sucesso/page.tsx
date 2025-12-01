@@ -18,19 +18,77 @@ export default function PaymentSuccessPage() {
   useEffect(() => {
     const processPayment = async () => {
       try {
-        // Check if we have a slug parameter (direct creation) or Mercado Pago params
+        // Check for Stripe session_id parameter
+        const sessionId = searchParams.get("session_id")
         const slug = searchParams.get("slug")
-        const paymentId = searchParams.get("payment_id")
-        const preferenceId = searchParams.get("preference_id")
-        const status = searchParams.get("status")
 
-        console.log("Payment success params:", { slug, paymentId, preferenceId, status })
+        console.log("Payment success params:", { sessionId, slug })
 
         let memory: any = null
 
-        if (slug) {
-          // Direct creation - get memory by slug
-          console.log("Direct creation - fetching memory by slug:", slug)
+        if (sessionId) {
+          // Stripe flow - verify payment session
+          console.log("Stripe flow - verifying session:", sessionId)
+
+          try {
+            // Retrieve session from Stripe API
+            const response = await fetch(`/api/verify-stripe-session?session_id=${sessionId}`)
+            const sessionData = await response.json()
+
+            if (!response.ok || !sessionData.success) {
+              console.error("Failed to verify Stripe session:", sessionData)
+              toast.error("Erro ao verificar pagamento. Entre em contato com o suporte.")
+              return
+            }
+
+            const { memory_slug, memory_id } = sessionData.metadata
+
+            if (!memory_slug && !memory_id) {
+              console.error("No memory identifier in session metadata")
+              toast.error("Informações da memória não encontradas.")
+              return
+            }
+
+            // Get memory by slug or id
+            const identifier = memory_slug || memory_id
+            const memoryResponse = await fetch(`/api/memory/${identifier}`)
+            const memoryData = await memoryResponse.json()
+
+            if (!memoryResponse.ok || !memoryData) {
+              console.error("Memory not found:", identifier, memoryData)
+              toast.error("Página não encontrada. Entre em contato com o suporte.")
+              return
+            }
+
+            memory = memoryData
+
+            // Update payment status if not already paid
+            if (memory.payment_status !== 'paid') {
+              console.log("Updating payment status to 'paid' for memory:", memory.id)
+              const updateResponse = await fetch(`/api/memory/${identifier}`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ payment_status: 'paid' }),
+              })
+
+              if (!updateResponse.ok) {
+                console.error("Failed to update payment status")
+                // Continue anyway
+              } else {
+                console.log("Payment status updated successfully")
+                memory.payment_status = 'paid'
+              }
+            }
+          } catch (stripeError) {
+            console.error("Stripe verification error:", stripeError)
+            toast.error("Erro ao verificar pagamento Stripe.")
+            return
+          }
+        } else if (slug) {
+          // Direct access - get memory by slug (for testing or direct links)
+          console.log("Direct access - fetching memory by slug:", slug)
           const memoryResponse = await fetch(`/api/memory/${slug}`)
           const memoryData = await memoryResponse.json()
 
@@ -41,51 +99,6 @@ export default function PaymentSuccessPage() {
           }
 
           memory = memoryData
-        } else if (preferenceId) {
-          // Mercado Pago flow - get memory by preference_id
-          console.log("Mercado Pago flow - fetching memory by preference_id:", preferenceId)
-
-          if (!paymentId || !preferenceId) {
-            toast.error("Informações de pagamento incompletas.")
-            router.push("/pagamento/pendente")
-            return
-          }
-
-          // Skip Mercado Pago verification for now - trust the redirect from MP
-          // In production, you should verify payment status with Mercado Pago API
-          console.log("Payment verification skipped - proceeding with memory lookup")
-
-          const memoryResponse = await fetch(`/api/memory/${preferenceId}`)
-          const memoryData = await memoryResponse.json()
-
-          if (!memoryResponse.ok || !memoryData) {
-            console.error("Memory not found for preference_id:", preferenceId, memoryData)
-            toast.error("Página não encontrada. Entre em contato com o suporte.")
-            return
-          }
-
-          memory = memoryData
-
-          // Ensure payment status is set to 'paid' since payment was approved
-          if (memory.payment_status !== 'paid') {
-            console.log("Updating payment status to 'paid' for memory:", memory.id)
-            const updateResponse = await fetch(`/api/memory/${preferenceId}`, {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ payment_status: 'paid' }),
-            })
-
-            if (!updateResponse.ok) {
-              console.error("Failed to update payment status")
-              // Continue anyway, as the page might still work
-            } else {
-              console.log("Payment status updated successfully")
-              // Update local memory object
-              memory.payment_status = 'paid'
-            }
-          }
         } else {
           toast.error("Parâmetros de acesso inválidos.")
           router.push("/")

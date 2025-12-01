@@ -59,7 +59,10 @@ export async function PATCH(
   try {
     const { preferenceId } = params
 
+    console.log('PATCH called with preferenceId:', preferenceId)
+
     if (!preferenceId) {
+      console.log('No preferenceId provided')
       return new Response(JSON.stringify({ error: 'Preference ID is required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -69,7 +72,10 @@ export async function PATCH(
     const body = await request.json()
     const { payment_status } = body
 
+    console.log('Payment status to update:', payment_status)
+
     if (!payment_status) {
+      console.log('No payment_status provided')
       return new Response(JSON.stringify({ error: 'payment_status is required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -85,21 +91,27 @@ export async function PATCH(
     // Check if preferenceId looks like a slug (contains letters) or preference_id (numeric)
     if (isNaN(Number(preferenceId))) {
       // It's a slug
+      console.log('Updating by slug:', preferenceId)
       query = query.eq('slug', preferenceId)
     } else {
       // It's a preference_id
+      console.log('Updating by preference_id:', preferenceId)
       query = query.eq('preference_id', preferenceId)
     }
 
     const { data: memory, error } = await query.single()
 
+    console.log('Update result - data:', memory, 'error:', error)
+
     if (error || !memory) {
+      console.error('Failed to update memory:', error)
       return new Response(JSON.stringify({ error: 'Failed to update memory' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       })
     }
 
+    console.log('Memory updated successfully:', memory)
     return new Response(JSON.stringify(memory), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
